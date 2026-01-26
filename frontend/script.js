@@ -205,7 +205,7 @@ function setupChatInput() {
     const micIcon = actionBtn.querySelector('.icon-mic');
     const sendIcon = actionBtn.querySelector('.icon-send');
 
-    // Function to toggle state
+    // Toggle send/mic icon based on input
     function updateIcon() {
         if (input.value.trim().length > 0) {
             micIcon.classList.add('hidden');
@@ -227,7 +227,7 @@ function setupChatInput() {
         const message = input.value.trim();
         if (!message) return;
 
-        console.log('Sending message:', message);
+        console.log("Sending message:", message);
         input.value = '';
         updateIcon();
 
@@ -236,30 +236,41 @@ function setupChatInput() {
         input.disabled = true;
 
         try {
+            // Get current Firebase ID token
             const idToken = await currentUser.getIdToken();
 
-            const response = await fetch('http://localhost:3000/api/chat', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+            const response = await fetch("http://localhost:3000/api/chat", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({
                     message,
-                    idToken,
-                    accessToken: googleAccessToken
+                    userId: currentUser.uid,   // <-- required by backend
+                    accessToken: googleAccessToken || null
                 })
             });
+
+
+
+            if (!response.ok) {
+                const errData = await response.json().catch(() => ({}));
+                console.error("Backend error:", errData);
+                alert("Error: " + (errData.reply || errData.error || "Unknown error"));
+                return;
+            }
 
             const data = await response.json();
             console.log("AI Reply:", data.reply);
 
-            alert("AI: " + data.reply);
-
-            // Refetching is handled by the realtime listener onValue, so we probably don't need manual refresh
-            // unless the backend does something invisible to Firebase (unlikely here).
-            // But if the tool added data to Firebase, the listener will update the UI automatically.
+            // Show AI reply
+            if (data.reply) {
+                alert("AI: " + data.reply);
+            } else {
+                alert("AI returned no message.");
+            }
 
         } catch (error) {
-            console.error("Error sending message:", error);
-            alert("Error communicating with AI Assistant. Ensure backend is running.");
+            console.error("Error communicating with AI:", error);
+            alert("Error communicating with AI Assistant. Make sure backend is running.");
         } finally {
             input.placeholder = originalPlaceholder;
             input.disabled = false;
@@ -267,22 +278,24 @@ function setupChatInput() {
         }
     }
 
-    input.addEventListener('input', updateIcon);
+    input.addEventListener("input", updateIcon);
 
-    input.addEventListener('keydown', (e) => {
-        if (e.key === 'Enter' && input.value.trim().length > 0) {
+    input.addEventListener("keydown", (e) => {
+        if (e.key === "Enter" && input.value.trim().length > 0) {
             sendMessage();
         }
     });
 
-    actionBtn.addEventListener('click', () => {
-        if (!sendIcon.classList.contains('hidden')) {
+    actionBtn.addEventListener("click", () => {
+        if (!sendIcon.classList.contains("hidden")) {
             sendMessage();
         } else {
-            console.log('Voice input triggered');
+            console.log("Voice input triggered (not implemented)");
         }
     });
 }
+
+
 
 function parseTime(timeStr) {
     const [hours, minutes] = timeStr.split(':').map(Number);

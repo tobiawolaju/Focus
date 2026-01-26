@@ -1,179 +1,234 @@
 require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
+const { admin, db } = require('./firebase-config');
 const { GoogleGenerativeAI } = require('@google/generative-ai');
-const tools = require('./tools');
-const admin = require('./firebase-config');
 
+// --------------------
+// Gemini AI Init
+// --------------------
+const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
+const model = genAI.getGenerativeModel({ model: "gemini-flash-latest" });
+
+// --------------------
+// Express App
+// --------------------
 const app = express();
 app.use(cors());
 app.use(express.json());
 
-const PORT = 3000;
+// --------------------
+// Helpers
+// --------------------
+function normalizeAliases(args) {
+    return {
+        title: args.title || args.activity || args.task,
+        startTime: args.startTime || args.time || args.at,
+        endTime: args.endTime,
+        duration: args.duration,
+        description: args.description,
+        location: args.location,
+        id: args.id,
+        query: args.query
+    };
+}
 
-// Initialize Gemini API
-const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
+function parseTime(timeStr) {
+    const match = timeStr?.match(/(\d+)(?::(\d+))?\s*(am|pm)?/i);
+    if (!match) return null;
 
-// Define Function Declarations for Gemini
-const toolDeclarations = [
-    {
-        name: "getSchedule",
-        description: "Get the current daily schedule of activities",
-        parameters: { type: "OBJECT", properties: {}, required: [] }
-    },
-    {
-        name: "addActivity",
-        description: "Add a new activity to the schedule",
-        parameters: {
-            type: "OBJECT",
-            properties: {
-                title: { type: "STRING", description: "Title of the activity" },
-                startTime: { type: "STRING", description: "Start time in HH:MM (24h) format" },
-                endTime: { type: "STRING", description: "End time in HH:MM (24h) format" },
-                description: { type: "STRING", description: "Description details" },
-                location: { type: "STRING", description: "Location" },
-                attendees: { type: "ARRAY", items: { type: "STRING" }, description: "List of attendee names" }
-            },
-            required: ["title", "startTime", "endTime"]
-        }
-    },
-    {
-        name: "updateActivity",
-        description: "Update an existing activity",
-        parameters: {
-            type: "OBJECT",
-            properties: {
-                id: { type: "NUMBER", description: "ID of the activity to update" },
-                title: { type: "STRING" },
-                startTime: { type: "STRING" },
-                endTime: { type: "STRING" },
-                description: { type: "STRING" },
-                location: { type: "STRING" },
-                status: { type: "STRING" }
-            },
-            required: ["id"]
-        }
-    },
-    {
-        name: "deleteActivity",
-        description: "Delete an activity by ID",
-        parameters: {
-            type: "OBJECT",
-            properties: {
-                id: { type: "NUMBER", description: "ID of the activity to delete" }
-            },
-            required: ["id"]
-        }
-    },
-    {
-        name: "findHackathons",
-        description: "Find hackathons based on criteria",
-        parameters: {
-            type: "OBJECT",
-            properties: {
-                query: { type: "STRING", description: "Search query for hackathons" }
-            },
-            required: ["query"]
-        }
-    },
-];
+    let hour = parseInt(match[1], 10);
+    const minutes = parseInt(match[2] || "0", 10);
+    const meridian = match[3]?.toLowerCase();
 
-app.post('/api/chat', async (req, res) => {
-    try {
-        const { message, idToken, accessToken } = req.body;
+    if (meridian === "pm" && hour < 12) hour += 12;
+    if (meridian === "am" && hour === 12) hour = 0;
 
-        if (!idToken) {
-            return res.status(401).json({ reply: "Unauthorized. Please sign in." });
-        }
+    const date = new Date();
+    date.setHours(hour, minutes, 0, 0);
+    return date;
+}
 
-        let uid;
-        try {
-            const decodedToken = await admin.auth().verifyIdToken(idToken);
-            uid = decodedToken.uid;
-        } catch (authError) {
-            console.error("Auth Error:", authError);
-            return res.status(401).json({ reply: "Invalid session. Please sign in again." });
-        }
+function formatTime(date) {
+    return date.toTimeString().slice(0, 5); // HH:MM
+}
 
-        // Use Gemini Pro model
-        const model = genAI.getGenerativeModel({ model: "gemini-flash-latest" });
+function normalizeAddActivityArgs(args) {
+    const { title, startTime, endTime, duration } = args;
 
-        const chat = model.startChat({
-            tools: [{ functionDeclarations: toolDeclarations }],
-        });
+    if (!title || !startTime) {
+        throw new Error("title and startTime are required");
+    }
 
-        const result = await chat.sendMessage(message);
-        const response = result.response;
-        const functionCalls = response.functionCalls();
+    if (!endTime && duration) {
+        const match = duration.match(/(\d+)\s*(min|mins|minutes|hr|hour|hours)/i);
+        if (match) {
+            const value = parseInt(match[1], 10);
+            const unit = match[2].toLowerCase();
 
-        let finalResponseText = response.text();
-        let refreshNeeded = false;
-
-        if (functionCalls && functionCalls.length > 0) {
-            for (const call of functionCalls) {
-                const fnName = call.name;
-                const fnArgs = call.args;
-
-                let toolResult;
-                if (tools[fnName]) {
-                    console.log(`Executing tool: ${fnName} for user ${uid}`, fnArgs);
-
-                    // Pass user context (uid, accessToken) to tools
-                    const context = { uid, accessToken };
-                    try {
-                        toolResult = await tools[fnName](fnArgs, context);
-                    } catch (err) {
-                        console.error(`Tool execution error: ${err.message}`);
-                        toolResult = { error: err.message };
-                    }
-
-                    if (['addActivity', 'updateActivity', 'deleteActivity'].includes(fnName)) {
-                        refreshNeeded = true;
-                    }
-                } else {
-                    toolResult = { error: `Function ${fnName} not found` };
-                }
-
-                const resultChat = await chat.sendMessage([{
-                    functionResponse: {
-                        name: fnName,
-                        response: { content: toolResult }
-                    }
-                }]);
-
-                finalResponseText = resultChat.response.text();
+            const start = parseTime(startTime);
+            if (start) {
+                const minutesToAdd = unit.startsWith("h") ? value * 60 : value;
+                const end = new Date(start.getTime() + minutesToAdd * 60000);
+                return {
+                    ...args,
+                    endTime: formatTime(end)
+                };
             }
+        }
+    }
+
+    if (!endTime) {
+        throw new Error("endTime is required (or provide duration)");
+    }
+
+    return args;
+}
+
+// --------------------
+// Intent Extraction
+// --------------------
+async function extractIntent(message) {
+    const prompt = `
+You are an intent extraction engine.
+
+Return ONLY valid JSON.
+No markdown. No commentary.
+
+IMPORTANT:
+- Use ONLY the field names defined below
+- DO NOT invent new field names
+- Map user language to these exact keys
+
+Schema:
+{
+  "intent": "getSchedule" | "addActivity" | "updateActivity" | "deleteActivity" | "findHackathons" | null,
+  "arguments": {
+    "title"?: string,
+    "startTime"?: string,
+    "endTime"?: string,
+    "duration"?: string,
+    "description"?: string,
+    "location"?: string,
+    "id"?: number,
+    "query"?: string
+  },
+  "confidence": number
+}
+
+Mapping rules:
+- "activity", "task", "event" → title
+- "time", "at", "starts" → startTime
+- "for X minutes/hours" → duration
+
+Rules:
+- If required fields are missing, still return best guess
+- confidence must be between 0 and 1
+
+User message:
+"${message}"
+`;
+
+    const result = await model.generateContent(prompt);
+    const text = result.response.text().trim();
+
+    try {
+        return JSON.parse(text);
+    } catch (err) {
+        console.error("Intent JSON parse failed:", text);
+        return { intent: null, arguments: {}, confidence: 0 };
+    }
+}
+
+// --------------------
+// Tools (RTDB operations)
+// --------------------
+const tools = {
+    async addActivity(args, context) {
+        const ref = db.ref(`users/${context.userId}/schedule`).push();
+        await ref.set({
+            title: args.title,
+            startTime: args.startTime,
+            endTime: args.endTime,
+            description: args.description || "",
+            location: args.location || ""
+        });
+        return { success: true, id: ref.key };
+    },
+
+    async getSchedule(_, context) {
+        const snapshot = await db.ref(`users/${context.userId}/schedule`).once("value");
+        return snapshot.val() || {};
+    }
+};
+
+// --------------------
+// Chat API
+// --------------------
+app.post("/api/chat", async (req, res) => {
+    try {
+        const { message, userId } = req.body;
+        if (!message || !userId) {
+            return res.status(400).json({ error: "message and userId required" });
+        }
+
+        const { intent, arguments: rawArgs, confidence } = await extractIntent(message);
+        console.log("INTENT:", intent, "CONFIDENCE:", confidence, "ARGS:", rawArgs);
+
+        if (!intent || confidence < 0.6) {
+            return res.json({ reply: "I’m not sure what you want to do.", refreshNeeded: false });
+        }
+
+        let result = null;
+        let refreshNeeded = false;
+        const context = { userId };
+
+        switch (intent) {
+            case "addActivity": {
+                const aliasedArgs = normalizeAliases(rawArgs);
+                const safeArgs = normalizeAddActivityArgs(aliasedArgs);
+                result = await tools.addActivity(safeArgs, context);
+                refreshNeeded = true;
+                break;
+            }
+
+            case "getSchedule": {
+                result = await tools.getSchedule({}, context);
+                break;
+            }
+
+            default:
+                return res.json({ reply: "That action isn’t supported yet.", refreshNeeded: false });
         }
 
         res.json({
-            reply: finalResponseText || "Processed.",
+            reply: "Done ✅",
+            result,
             refreshNeeded
         });
 
-    } catch (error) {
-        console.error("Error in chat endpoint:", error);
-        res.status(500).json({ reply: "Sorry, I encountered an error processing your request." });
+    } catch (err) {
+        console.error("Chat error:", err);
+        res.status(500).json({ reply: err.message, refreshNeeded: false });
     }
 });
 
-app.get('/api/debug', async (req, res) => {
+// --------------------
+// Debug Route
+// --------------------
+app.get("/api/debug", async (_, res) => {
     const status = {
         geminiKeyPresent: !!process.env.GEMINI_API_KEY,
         firebaseConfigured: !!admin.apps.length,
-        serviceAccount: !!require('./serviceAccountKey.json'),
-        envFile: require('fs').existsSync('.env')
+        envFile: require("fs").existsSync(".env")
     };
-
-    try {
-        await admin.auth().listUsers(1);
-        status.firebaseAuth = "Connected";
-    } catch (e) {
-        status.firebaseAuth = "Error: " + e.message;
-    }
-
     res.json(status);
 });
 
+// --------------------
+// Start Server
+// --------------------
+const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
     console.log(`Server running at http://localhost:${PORT}`);
 });
