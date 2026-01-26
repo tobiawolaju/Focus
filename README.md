@@ -6,20 +6,20 @@ A smart daily planner application that uses AI to manage your schedule, syncs wi
 
 ```mermaid
 graph TD
-    subgraph Client [Frontend (Vite)]
+    subgraph Client ["Frontend (Vite)"]
         UI[User Interface]
         AuthSDK[Firebase Auth SDK]
         DBSDK[Firebase Realtime DB SDK]
     end
 
-    subgraph Server [Backend (Node/Express)]
+    subgraph Server ["Backend (Node/Express)"]
         API[API Endpoint /api/chat]
         Gemini[Gemini AI Client]
         Tools[Tool Definitions]
         FBAdmin[Firebase Admin SDK]
     end
 
-    subgraph Cloud [Google Cloud & Firebase]
+    subgraph Cloud ["Google Cloud & Firebase"]
         FirebaseAuth[Firebase Authentication]
         RTDB[(Realtime Database)]
         GeminiAPI[Gemini Pro API]
