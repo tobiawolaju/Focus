@@ -1,7 +1,5 @@
-const admin = require('./firebase-config');
+const { db } = require('./firebase-config');
 const { google } = require('googleapis');
-
-const db = admin.database();
 
 // Helper to get Google Calendar Client
 function getCalendarClient(accessToken) {
