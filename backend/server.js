@@ -5,7 +5,32 @@ const { admin, db } = require('./firebase-config');
 const { GoogleGenerativeAI } = require('@google/generative-ai');
 
 // --------------------
-// Gemini AI Init
+// Activity Management Routes (Direct)
+// --------------------
+app.post("/api/activities/update", async (req, res) => {
+    const { id, updates, userId, accessToken } = req.body;
+    try {
+        const result = await tools.updateActivity({ id, ...updates }, { uid: userId, accessToken });
+        res.json(result);
+    } catch (err) {
+        console.error("Update error:", err);
+        res.status(500).json({ error: err.message });
+    }
+});
+
+app.post("/api/activities/delete", async (req, res) => {
+    const { id, userId, accessToken } = req.body;
+    try {
+        const result = await tools.deleteActivity({ id }, { uid: userId, accessToken });
+        res.json(result);
+    } catch (err) {
+        console.error("Delete error:", err);
+        res.status(500).json({ error: err.message });
+    }
+});
+
+// --------------------
+// Gemini Chat Route
 // --------------------
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
 const model = genAI.getGenerativeModel({ model: "gemini-flash-latest" });

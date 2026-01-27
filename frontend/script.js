@@ -99,9 +99,16 @@ function initAuth() {
 function loadUserSchedule(uid) {
     const scheduleRef = database.ref('users/' + uid + '/schedule');
     scheduleRef.on('value', (snapshot) => {
-        const activities = snapshot.val() || [];
-        // Convert object to array if needed (Firebase might return object for list with numeric keys)
-        const activitiesArray = Array.isArray(activities) ? activities : Object.values(activities);
+        const activities = snapshot.val() || {};
+
+        // Convert object to array and ensure we have an 'id' that matches backend expectations
+        const activitiesArray = Object.keys(activities).map(key => {
+            const data = activities[key];
+            return {
+                ...data,
+                id: data.id || key // Prefer internal ID if set by backend tools
+            };
+        });
 
         document.getElementById('tracks-container').innerHTML = '';
         renderTimeRuler();
@@ -160,16 +167,128 @@ function renderDetails(activity) {
             </div>
 
             <div class="detail-actions">
-                <button class="action-button primary">Edit</button>
-                <button class="action-button secondary">Delete</button>
+                <button class="action-button primary" id="edit-btn">Edit</button>
+                <button class="action-button secondary" id="delete-btn">Delete</button>
             </div>
         </div>
     `;
+
+    // Button Listeners
+    panel.querySelector('#delete-btn').addEventListener('click', () => {
+        if (confirm(`Are you sure you want to delete "${activity.title}"?`)) {
+            deleteActivity(activity.id);
+        }
+    });
+
+    panel.querySelector('#edit-btn').addEventListener('click', () => {
+        editActivity(activity);
+    });
 
     // Open sheet on mobile
     panel.classList.add('open');
     overlay.classList.add('active');
     document.querySelector('.chat-input-container').classList.add('hidden-mobile');
+}
+
+function editActivity(activity) {
+    const panel = document.getElementById('details-panel');
+    panel.innerHTML = `
+        <div class="edit-container">
+            <h3>Edit Activity</h3>
+            <div class="form-group">
+                <label>Title</label>
+                <input type="text" id="edit-title" value="${activity.title}">
+            </div>
+            <div class="form-grid">
+                <div class="form-group">
+                    <label>Start Time</label>
+                    <input type="time" id="edit-start" value="${activity.startTime}">
+                </div>
+                <div class="form-group">
+                    <label>End Time</label>
+                    <input type="time" id="edit-end" value="${activity.endTime}">
+                </div>
+            </div>
+            <div class="form-group">
+                <label>Location</label>
+                <input type="text" id="edit-location" value="${activity.location || ''}">
+            </div>
+            <div class="form-group">
+                <label>Description</label>
+                <textarea id="edit-description">${activity.description || ''}</textarea>
+            </div>
+            <div class="detail-actions">
+                <button class="action-button primary" id="save-edit">Save Changes</button>
+                <button class="action-button secondary" id="cancel-edit">Cancel</button>
+            </div>
+        </div>
+    `;
+
+    document.getElementById('cancel-edit').addEventListener('click', () => {
+        renderDetails(activity);
+    });
+
+    document.getElementById('save-edit').addEventListener('click', async () => {
+        const saveBtn = document.getElementById('save-edit');
+        saveBtn.textContent = 'Saving...';
+        saveBtn.disabled = true;
+
+        const updatedData = {
+            title: document.getElementById('edit-title').value,
+            startTime: document.getElementById('edit-start').value,
+            endTime: document.getElementById('edit-end').value,
+            location: document.getElementById('edit-location').value,
+            description: document.getElementById('edit-description').value,
+            status: activity.status || 'Scheduled'
+        };
+
+        await updateActivity(activity.id, updatedData);
+    });
+}
+
+async function updateActivity(activityId, data) {
+    if (!currentUser) return;
+    try {
+        const response = await fetch("https://to-do-iun8.onrender.com/api/activities/update", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+                id: activityId,
+                updates: data,
+                userId: currentUser.uid,
+                accessToken: googleAccessToken
+            })
+        });
+
+        if (!response.ok) throw new Error("Failed to update activity");
+
+        closeDetails();
+    } catch (error) {
+        console.error("Error updating activity:", error);
+        alert("Failed to update activity.");
+    }
+}
+
+async function deleteActivity(activityId) {
+    if (!currentUser) return;
+    try {
+        const response = await fetch("https://to-do-iun8.onrender.com/api/activities/delete", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+                id: activityId,
+                userId: currentUser.uid,
+                accessToken: googleAccessToken
+            })
+        });
+
+        if (!response.ok) throw new Error("Failed to delete activity");
+
+        closeDetails();
+    } catch (error) {
+        console.error("Error deleting activity:", error);
+        alert("Failed to delete activity.");
+    }
 }
 
 function closeDetails() {
