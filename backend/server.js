@@ -217,10 +217,13 @@ app.post("/api/chat", async (req, res) => {
 // Debug Route
 // --------------------
 app.get("/api/debug", async (_, res) => {
+    const { firebaseReady } = require('./firebase-config');
     const status = {
         geminiKeyPresent: !!process.env.GEMINI_API_KEY,
-        firebaseConfigured: !!admin.apps.length,
-        envFile: require("fs").existsSync(".env")
+        firebaseConfigured: firebaseReady,
+        envFile: require("fs").existsSync(".env"),
+        render: !!process.env.RENDER,
+        nodeVersion: process.version
     };
     res.json(status);
 });
