@@ -167,27 +167,6 @@ User message:
     }
 }
 
-// --------------------
-// Tools (RTDB operations)
-// --------------------
-const tools = {
-    async addActivity(args, context) {
-        const ref = db.ref(`users/${context.userId}/schedule`).push();
-        await ref.set({
-            title: args.title,
-            startTime: args.startTime,
-            endTime: args.endTime,
-            description: args.description || "",
-            location: args.location || ""
-        });
-        return { success: true, id: ref.key };
-    },
-
-    async getSchedule(_, context) {
-        const snapshot = await db.ref(`users/${context.userId}/schedule`).once("value");
-        return snapshot.val() || {};
-    }
-};
 
 // --------------------
 // Chat API
@@ -208,7 +187,8 @@ app.post("/api/chat", async (req, res) => {
 
         let result = null;
         let refreshNeeded = false;
-        const context = { userId };
+        const { accessToken } = req.body;
+        const context = { uid: userId, accessToken };
 
         switch (intent) {
             case "addActivity": {
