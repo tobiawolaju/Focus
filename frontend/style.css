@@ -15,7 +15,10 @@
     --border-subtle: rgba(255, 255, 255, 0.06);
     --border-glow: rgba(255, 255, 255, 0.1);
 
-    --hour-width: 200px;
+    --zoom-level: 1;
+    --base-hour-width: 200px;
+    --hour-width: calc(var(--base-hour-width) * var(--zoom-level));
+    --pixels-per-minute: calc(var(--hour-width) / 60);
     --ruler-height: 56px;
     --track-height: 80px;
     --track-gap: 16px;
@@ -428,11 +431,9 @@ header h1 {
     position: relative;
     min-height: calc(100vh - 200px);
     /* Horizontal track lines */
-    background-image:
-        linear-gradient(var(--border-subtle) 1px, transparent 1px),
-        linear-gradient(90deg, var(--border-subtle) 1px, transparent 1px);
     background-size: 100% var(--track-height), var(--hour-width) 100%;
     background-position: 0 -1px, -1px 0;
+    transition: background-size 0.1s var(--ease-standard);
 }
 
 /* Activity Blocks - Onyx Gloss Style */
@@ -449,7 +450,7 @@ header h1 {
     background: var(--bg-surface);
     border: 1px solid var(--border-subtle);
     cursor: pointer;
-    transition: all 0.3s var(--ease-pro);
+    transition: transform 0.3s var(--ease-pro), left 0.1s var(--ease-standard), width 0.1s var(--ease-standard);
     z-index: 1;
 }
 

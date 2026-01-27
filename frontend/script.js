@@ -3,10 +3,14 @@ import 'firebase/compat/auth';
 import 'firebase/compat/database';
 
 const CONFIG = {
-    pixelsPerMinute: 3.333, // Match CSS --hour-width (200px / 60min)
     startHour: 0,
-    endHour: 24
+    endHour: 24,
+    minZoom: 0.1,  // Roughly 24h in view
+    maxZoom: 5.0,
+    zoomStep: 0.1
 };
+
+let currentZoom = 1.0;
 
 // --- Firebase Configuration ---
 const firebaseConfig = {
@@ -181,6 +185,7 @@ function init() {
     setupCurrentTimeIndicator();
     scrollToInitialTime();
     setupChatInput();
+    setupZoomListeners();
     initAuth(); // Initialize auth listeners
 
     // Close details when clicking overlay
@@ -371,9 +376,10 @@ function layoutAndRenderActivities(activities) {
         const end = parseTime(activity.endTime);
         const duration = end - start;
 
-        el.style.left = `${start * CONFIG.pixelsPerMinute}px`;
-        el.style.width = `${duration * CONFIG.pixelsPerMinute}px`;
-        el.style.top = `${activity.trackIndex * (trackHeight + trackGap)}px`;
+        // Use CSS variables for time-based positioning
+        el.style.left = `calc(${start} * var(--pixels-per-minute))`;
+        el.style.width = `calc(${duration} * var(--pixels-per-minute))`;
+        el.style.top = `${activity.trackIndex * (80 + 16)}px`; // 80 is trackHeight, 16 is trackGap
 
         let bgColor = activity.color || '#5865F2';
         el.style.backgroundColor = hexToRgba(bgColor, 0.15);
@@ -408,7 +414,7 @@ function setupCurrentTimeIndicator() {
     function update() {
         const now = new Date();
         const minutes = now.getHours() * 60 + now.getMinutes();
-        indicator.style.left = `${minutes * CONFIG.pixelsPerMinute}px`;
+        indicator.style.left = `calc(${minutes} * var(--pixels-per-minute))`;
         requestAnimationFrame(update);
     }
     update();
@@ -418,7 +424,10 @@ function scrollToInitialTime() {
     const now = new Date();
     const minutes = now.getHours() * 60 + now.getMinutes();
     const scrollArea = document.querySelector('.timeline-container');
-    const targetX = minutes * CONFIG.pixelsPerMinute - (window.innerWidth / 2);
+
+    // Calculate position based on current zoom
+    const pixelsPerMinute = (200 * currentZoom) / 60;
+    const targetX = minutes * pixelsPerMinute - (window.innerWidth / 2);
     scrollArea.scrollLeft = Math.max(0, targetX);
 }
 
