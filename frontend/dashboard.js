@@ -19,35 +19,6 @@ if (!firebase.apps.length) {
 
 const auth = firebase.auth();
 
-function renderActivityChart() {
-    const grid = document.getElementById('heatmap-grid');
-    if (!grid) return;
-
-    grid.innerHTML = '';
-
-    // Generate 52 weeks * 7 days = 364 cells
-    const totalCells = 52 * 7;
-
-    for (let i = 0; i < totalCells; i++) {
-        const cell = document.createElement('div');
-        cell.className = 'heat-cell';
-
-        // Randomly assign levels for visualization
-        const rand = Math.random();
-        if (rand > 0.95) cell.classList.add('level-4');
-        else if (rand > 0.85) cell.classList.add('level-3');
-        else if (rand > 0.7) cell.classList.add('level-2');
-        else if (rand > 0.5) cell.classList.add('level-1');
-
-        // Add tooltip info (mock date)
-        const date = new Date();
-        date.setDate(date.getDate() - (totalCells - i));
-        cell.title = `${date.toLocaleDateString()}: ${Math.floor(Math.random() * 10)} activities`;
-
-        grid.appendChild(cell);
-    }
-}
-
 // Strict System Theme Management
 const initTheme = () => {
     // Just listen for system changes
@@ -93,7 +64,6 @@ document.addEventListener('DOMContentLoaded', () => {
             if (userPhotoSmall) userPhotoSmall.src = photoURL;
             if (userNameHeader) userNameHeader.textContent = user.displayName || 'Tobi Awolaju';
 
-            renderActivityChart();
         } else {
             // Redirect to home if not logged in
             window.location.href = 'index.html';
