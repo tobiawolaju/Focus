@@ -297,8 +297,35 @@ async function updateActivity(activityId, data) {
             throw new Error(errorData.error || "Failed to update activity");
         }
 
-        // Success - close the panel (Firebase listener will update the UI)
-        closeDetails();
+        // Show "Saved" feedback
+        if (saveBtn) {
+            saveBtn.textContent = 'Saved ✓';
+            saveBtn.disabled = true;
+        }
+
+        // Wait for Firebase to sync the updated data (give it a moment)
+        await new Promise(resolve => setTimeout(resolve, 800));
+
+        // Get the updated activity from Firebase and show detail view
+        const scheduleRef = database.ref('users/' + currentUser.uid + '/schedule');
+        const snapshot = await scheduleRef.once('value');
+        const activities = snapshot.val() || {};
+
+        // Find the updated activity
+        const activitiesArray = Object.keys(activities).map(key => ({
+            ...activities[key],
+            id: activities[key].id || key
+        }));
+
+        const updatedActivity = activitiesArray.find(a => a.id === parseInt(activityId));
+
+        if (updatedActivity) {
+            // Render the detail view with updated data
+            renderDetails(updatedActivity);
+        } else {
+            // Fallback: just close if we can't find it
+            closeDetails();
+        }
 
     } catch (error) {
         console.error("Error updating activity:", error);
