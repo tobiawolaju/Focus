@@ -151,6 +151,11 @@ h3,
     background: var(--bg-main);
 }
 
+.hidden{
+display:none;
+}
+
+
 header {
     padding: 0 40px;
     background-color: var(--bg-main);
