@@ -1,6 +1,6 @@
 {
-    "name": "Focus",
-    "short_name": "Focus",
+    "name": "knacable",
+    "short_name": "knacable",
     "description": "AI-Powered Life Planning and Timeline Visualization.",
     "start_url": "/",
     "display": "standalone",
