@@ -687,6 +687,10 @@ header h1 {
         left: calc(50% - 200px);
         /* Adjust for sidebar */
     }
+
+    #cancel-edit {
+        display: none !important;
+    }
 }
 
 /* Dashboard Specific Styles */
