@@ -725,11 +725,13 @@ header h1 {
 }
 
 .splash-logo {
-  width: 64px;
-  height: 64px;
-  background: var(--accent-primary);
-  border-radius: var(--radius-xl);
-  box-shadow: 0 0 30px var(--accent-glow);
+  width: 128px;
+  height: 128px;
+  background-image: url('/logo.png');
+  background-size: contain;
+  background-repeat: no-repeat;
+  background-position: center;
+  /* Removed background color for the actual logo image */
 }
 
 /* Desktop Logic */
