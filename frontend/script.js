@@ -48,10 +48,9 @@ function initAuth() {
     const userPhoto = document.getElementById('user-photo');
     const landingPage = document.getElementById('landing-page');
     const appContainer = document.querySelector('.app-container');
-    const landingSignInBtn = document.getElementById('landing-signin-btn');
     const heroSignInBtn = document.getElementById('hero-signin-btn');
 
-    // Sign in function
+    // Sign-in function
     const handleSignIn = () => {
         auth.signInWithPopup(provider).then((result) => {
             // This gives you a Google Access Token. You can use it to access the Google API.
@@ -73,9 +72,7 @@ function initAuth() {
         }
     });
 
-    // Add event listeners for all sign-in buttons
     signInBtn.addEventListener('click', handleSignIn);
-    landingSignInBtn.addEventListener('click', handleSignIn);
     heroSignInBtn.addEventListener('click', handleSignIn);
 
     signOutBtn.addEventListener('click', () => {
@@ -90,7 +87,7 @@ function initAuth() {
         if (user) {
             // User is signed in - show app, hide landing page
             landingPage.classList.add('hidden');
-            appContainer.classList.remove('hidden');
+            appContainer.style.display = 'flex';
 
             // UI Updates
             signInBtn.classList.add('hidden');
@@ -102,7 +99,7 @@ function initAuth() {
         } else {
             // User is signed out - show landing page, hide app
             landingPage.classList.remove('hidden');
-            appContainer.classList.add('hidden');
+            appContainer.style.display = 'none';
 
             // UI Updates
             signInBtn.classList.remove('hidden');
