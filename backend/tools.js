@@ -20,7 +20,8 @@ function convertToISO(timeStr) {
 const tools = {
     getSchedule: async (args, context) => {
         const { uid } = context;
-        if (!uid) return { error: "User not authenticated" };
+        if (!uid) return { success: false, error: "User not authenticated" };
+        if (!db) return { success: false, error: "Database not initialized. Check server config." };
 
         const ref = db.ref(`users/${uid}/schedule`);
         const snapshot = await ref.once('value');
@@ -29,9 +30,10 @@ const tools = {
         return val ? (Array.isArray(val) ? val : Object.values(val)) : [];
     },
 
-    addActivity: async ({ title, startTime, endTime, description, location, attendees, tags }, context) => {
+    addActivity: async ({ title, startTime, endTime, description, location, attendees, tags, days }, context) => {
         const { uid, accessToken } = context;
-        if (!uid) return { error: "User not authenticated" };
+        if (!uid) return { success: false, error: "User not authenticated" };
+        if (!db) return { success: false, error: "Database not initialized. Check server config." };
 
         const ref = db.ref(`users/${uid}/schedule`);
         const snapshot = await ref.once('value');
@@ -101,7 +103,8 @@ const tools = {
 
     updateActivity: async ({ id, ...updates }, context) => {
         const { uid, accessToken } = context;
-        if (!uid) return { error: "User not authenticated" };
+        if (!uid) return { success: false, error: "User not authenticated" };
+        if (!db) return { success: false, error: "Database not initialized. Check server config." };
 
         const ref = db.ref(`users/${uid}/schedule`);
         const snapshot = await ref.once('value');
@@ -144,7 +147,8 @@ const tools = {
 
     deleteActivity: async ({ id }, context) => {
         const { uid, accessToken } = context;
-        if (!uid) return { error: "User not authenticated" };
+        if (!uid) return { success: false, error: "User not authenticated" };
+        if (!db) return { success: false, error: "Database not initialized. Check server config." };
 
         const ref = db.ref(`users/${uid}/schedule`);
         const snapshot = await ref.once('value');

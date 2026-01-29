@@ -237,25 +237,48 @@ app.post("/api/chat", async (req, res) => {
 
                 // Create a summary message
                 const successCount = responses.filter(r => r.success).length;
-                result = {
-                    message: `Added ${successCount} activity(s).`,
-                    details: responses
-                };
-                refreshNeeded = true;
+                const failCount = responses.length - successCount;
+
+                let replyMessage = "";
+                if (successCount > 0 && failCount === 0) {
+                    replyMessage = responses.length > 1 ? "Done! I've added all your tasks." : "Done! Added the activity.";
+                } else if (successCount > 0 && failCount > 0) {
+                    replyMessage = `Partially successful. Added ${successCount} tasks, but ${failCount} failed.`;
+                } else {
+                    const firstError = responses[0]?.error || "Unknown error";
+                    replyMessage = `I couldn't add that. Error: ${firstError}`;
+                }
+
+                res.json({
+                    reply: replyMessage,
+                    result: {
+                        message: `Processed ${responses.length} requests.`,
+                        details: responses
+                    },
+                    refreshNeeded: successCount > 0
+                });
                 break;
             }
 
             case "updateActivity": {
                 const aliasedArgs = normalizeAliases(rawArgs);
                 result = await tools.updateActivity(aliasedArgs, context);
-                refreshNeeded = true;
+                res.json({
+                    reply: result.success ? "Updated! ✅" : `Failed to update: ${result.message || result.error}`,
+                    result,
+                    refreshNeeded: !!result.success
+                });
                 break;
             }
 
             case "deleteActivity": {
                 const aliasedArgs = normalizeAliases(rawArgs);
                 result = await tools.deleteActivity(aliasedArgs, context);
-                refreshNeeded = true;
+                res.json({
+                    reply: result.success ? "Deleted! 🗑️" : `Failed to delete: ${result.message || result.error}`,
+                    result,
+                    refreshNeeded: !!result.success
+                });
                 break;
             }
 
