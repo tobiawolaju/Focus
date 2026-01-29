@@ -8,6 +8,7 @@ import './index.css';
 function App() {
   const { user, login, logout, accessToken, loading: authLoading } = useAuth();
   const [view, setView] = React.useState('timeline'); // 'timeline' or 'profile'
+  const [showSplash, setShowSplash] = React.useState(true);
 
   React.useEffect(() => {
     const timer = setTimeout(() => setShowSplash(false), 2500);
