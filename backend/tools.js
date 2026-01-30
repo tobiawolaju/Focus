@@ -22,34 +22,47 @@ function getRRULE(days) {
 
     const byDay = normalizedDays.map(d => dayMap[d]).filter(d => d).join(',');
 
-    console.log("Sync Trace: Days in:", JSON.stringify(days), "Normalized:", JSON.stringify(normalizedDays), "BYDAY:", byDay);
+    console.log("Sync Trace: Days in:", JSON.stringify(days), "BYDAY:", byDay);
 
     if (!byDay) return null;
 
     // Using WEEKLY with INTERVAL=1 ensures it shows up as "Custom" / "Weekly" in Calendar UI
-    const rrule = `RRULE:FREQ=WEEKLY;INTERVAL=1;BYDAY=${byDay}`;
+    const rrule = `RRULE:FREQ=WEEKLY;INTERVAL=1;BYDAY=${byDay};WKST=MO`;
     return [rrule];
 }
 
-// Helper: Convert HH:MM to ISO string for today, respecting the user's timezone
+// Helper: Convert HH:MM to ISO string with Offset (RFC3339)
 function convertToISO(timeStr, timeZone = 'UTC') {
     if (!timeStr) return undefined;
 
     const now = new Date();
-    const formatter = new Intl.DateTimeFormat('en-US', {
+    // Get date parts in target timezone
+    const partFormatter = new Intl.DateTimeFormat('en-US', {
         timeZone,
         year: 'numeric', month: 'numeric', day: 'numeric',
         hour: 'numeric', minute: 'numeric', second: 'numeric',
         hour12: false
     });
 
-    const parts = formatter.formatToParts(now);
+    // Get offset in target timezone (e.g. "GMT+01:00")
+    const offsetFormatter = new Intl.DateTimeFormat('en-US', {
+        timeZone,
+        timeZoneName: 'longOffset'
+    });
+
+    const parts = partFormatter.formatToParts(now);
     const dateParts = {};
     parts.forEach(({ type, value }) => { dateParts[type] = value; });
 
-    const [hours, minutes] = timeStr.split(':');
-    const isoStr = `${dateParts.year}-${dateParts.month.padStart(2, '0')}-${dateParts.day.padStart(2, '0')}T${hours.padStart(2, '0')}:${minutes.padStart(2, '0')}:00`;
+    const offsetParts = offsetFormatter.formatToParts(now);
+    const gmtOffset = offsetParts.find(p => p.type === 'timeZoneName')?.value || 'GMT+00:00';
+    // Map "GMT+01:00" or "GMT-05:00" to "+01:00" or "-05:00"
+    const offset = gmtOffset.replace('GMT', '') || '+00:00';
 
+    const [hours, minutes] = timeStr.split(':');
+    const isoStr = `${dateParts.year}-${dateParts.month.padStart(2, '0')}-${dateParts.day.padStart(2, '0')}T${hours.padStart(2, '0')}:${minutes.padStart(2, '0')}:00${offset}`;
+
+    console.log(`Sync Trace: Timezone ${timeZone} -> Offset ${offset} -> ISO ${isoStr}`);
     return isoStr;
 }
 
