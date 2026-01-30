@@ -5,7 +5,7 @@ const { memo } = React;
 
 const HOURS = Array.from({ length: 24 }, (_, i) => i);
 
-const TimeIndicator = memo(({ zoom }) => {
+const TimeIndicator = memo(() => {
     const [minutes, setMinutes] = useState(() => {
         const now = new Date();
         return now.getHours() * 60 + now.getMinutes();
@@ -31,7 +31,7 @@ const TimeIndicator = memo(({ zoom }) => {
     );
 });
 
-const TimeRuler = memo(({ zoom }) => (
+const TimeRuler = memo(() => (
     <div className="time-ruler" id="time-ruler">
         {HOURS.map(hour => (
             <div key={hour} className="time-marker">
@@ -48,59 +48,61 @@ function lerp(start, end, factor) {
 
 export default function Timeline({ activities, onSelectActivity }) {
     const containerRef = useRef(null);
-    const [zoom, setZoom] = useState(1.0);
+    const [zoom, setZoom] = useState(1.0); // Keep state for non-animation purposes if needed, or initial load
+    const zoomRef = useRef(1.0); // Source of truth for animation
     const targetZoomRef = useRef(1.0);
     const animatingRef = useRef(false);
+    const scrollCenterRef = useRef({ clientX: 0, relativeX: 0 });
 
     // --- INITIAL SCROLL ---
     useLayoutEffect(() => {
         if (containerRef.current) {
             const now = new Date();
             const currentTimeInMinutes = now.getHours() * 60 + now.getMinutes();
-            const pixelsPerMinute = (200 * zoom) / 60;
+            const pixelsPerMinute = (200 * zoomRef.current) / 60; // Use ref defaults
             const targetX = currentTimeInMinutes * pixelsPerMinute - (window.innerWidth / 2);
             containerRef.current.scrollLeft = Math.max(0, targetX);
         }
-    }, []); // Only on mount
+    }, []);
 
-    const zoomRef = useRef(zoom);
-    const lastTouchDistanceRef = useRef(0);
-    const scrollCenterRef = useRef({ clientX: 0, relativeX: 0 });
-
-    // Sync ref with state
-    useEffect(() => {
-        zoomRef.current = zoom;
-    }, [zoom]);
+    // Sync ref with state? No, render cycles shouldn't interfere with animation.
+    // We only update `zoom` state when animation STOPS to sync back up for any heavy logic.
 
     // Smooth zoom animation loop
     const animateZoom = () => {
         const el = containerRef.current;
-        if (!el) return;
+        if (!el) {
+            animatingRef.current = false;
+            return;
+        }
 
         const currentZoom = zoomRef.current;
         const targetZoom = targetZoomRef.current;
 
-        // Check if we're close enough to target
+        // Check if we're close enough to stop
         if (Math.abs(currentZoom - targetZoom) < 0.001) {
             animatingRef.current = false;
-            setZoom(targetZoom);
+            zoomRef.current = targetZoom;
+            setZoom(targetZoom); // Final sync
             document.documentElement.style.setProperty('--zoom-level', targetZoom);
             return;
         }
 
-        // Smooth interpolation (0.15 = smoothing factor, higher = faster)
-        const newZoom = lerp(currentZoom, targetZoom, 0.15);
+        // Smooth interpolation
+        const newZoom = lerp(currentZoom, targetZoom, 0.2); // Slightly faster factor for responsiveness
+        zoomRef.current = newZoom;
+        document.documentElement.style.setProperty('--zoom-level', newZoom);
 
         // Update scroll position to maintain center point
+        // Logic: The relative position (pixel offset) scales with zoom ratio.
         const { clientX, relativeX } = scrollCenterRef.current;
         const rect = el.getBoundingClientRect();
         const ratio = newZoom / currentZoom;
         const newRelativeX = relativeX * ratio;
 
-        setZoom(newZoom);
-        document.documentElement.style.setProperty('--zoom-level', newZoom);
+        // Update stored relativeX for next frame relative calculation consistency
+        scrollCenterRef.current.relativeX = newRelativeX;
 
-        // Adjust scroll to maintain position under cursor
         el.scrollLeft = newRelativeX - (clientX - rect.left);
 
         requestAnimationFrame(animateZoom);
@@ -119,13 +121,12 @@ export default function Timeline({ activities, onSelectActivity }) {
             if (clamped === targetZoomRef.current) return;
 
             const rect = el.getBoundingClientRect();
-            const relativeX = centerX - rect.left + el.scrollLeft;
+            // Capture cursor position relative to the SCROLL CONTENT (not viewport)
+            const currentRelativeX = (centerX - rect.left) + el.scrollLeft;
 
-            // Store the center point for smooth animation
-            scrollCenterRef.current = { clientX: centerX, relativeX };
+            scrollCenterRef.current = { clientX: centerX, relativeX: currentRelativeX };
             targetZoomRef.current = clamped;
 
-            // Start animation if not already running
             if (!animatingRef.current) {
                 animatingRef.current = true;
                 requestAnimationFrame(animateZoom);
@@ -136,8 +137,7 @@ export default function Timeline({ activities, onSelectActivity }) {
             if (e.ctrlKey || e.metaKey) {
                 e.preventDefault();
                 const delta = -e.deltaY;
-                // Smaller zoom steps for smoother feel
-                const factor = delta > 0 ? 1.08 : 0.92;
+                const factor = delta > 0 ? 1.1 : 0.9;
                 applyZoom(targetZoomRef.current * factor, e.clientX);
             }
         };

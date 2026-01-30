@@ -175,84 +175,64 @@ export default function DetailsSheet({ activity, isOpen, onClose, onSave, onDele
 
         return (
             <div className="detail-container">
-                <button
-                    className="close-panel-btn"
-                    onClick={onClose}
-                    aria-label="Close panel"
-                >
-                    <X size={20} />
-                </button>
-
-                <header className="detail-header" style={{ marginBottom: '24px' }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '8px' }}>
-                        <h2 style={{ fontSize: '20px', margin: 0 }}>{activity.title}</h2>
-                        <span
-                            className="status-chip"
-                            style={{
-                                backgroundColor: hexToRgba(statusColor, 0.1),
-                                color: statusColor,
-                                border: `1px solid ${hexToRgba(statusColor, 0.2)}`,
-                                flexShrink: 0
-                            }}
-                        >
-                            {activity.status || 'Scheduled'}
-                        </span>
+                <div className="detail-header">
+                    <h2>{activity.title}</h2>
+                    <div style={{ fontSize: '18px', fontWeight: 500, color: statusColor, display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        <span>{activity.status || 'Pending'}</span>
+                        <span style={{ color: 'rgba(255,255,255,0.4)' }}>—</span>
+                        <span style={{ color: '#fff' }}>{activity.startTime} — {activity.endTime}</span>
                     </div>
-
-                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '16px', color: 'var(--text-secondary)', fontSize: '0.9rem' }}>
-                        <div className="detail-time">
-                            <Clock size={16} />
-                            <span>{activity.startTime} — {activity.endTime}</span>
-                        </div>
-                        {activity.location && (
-                            <div className="detail-value">
-                                <MapPin size={16} />
-                                <span>{activity.location}</span>
-                            </div>
-                        )}
-                    </div>
-                </header>
-
-                {activity.description && (
-                    <div className="detail-section" style={{ borderBottom: '1px solid var(--border-light)', paddingBottom: '20px' }}>
-                        <p style={{ margin: 0, color: 'var(--text-primary)' }}>{activity.description}</p>
-                    </div>
-                )}
-
-                <div style={{ marginTop: '20px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
-                    {activity.tags && activity.tags.length > 0 && (
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                            <span style={{ fontSize: '13px', color: 'var(--text-muted)', fontWeight: 500, width: '60px' }}>Tags</span>
-                            <div className="tags-list">
-                                {activity.tags.map(tag => (
-                                    <span key={tag} className="tag-chip">{tag}</span>
-                                ))}
-                            </div>
-                        </div>
-                    )}
-
-                    {activity.days && activity.days.length > 0 && (
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                            <span style={{ fontSize: '13px', color: 'var(--text-muted)', fontWeight: 500, width: '60px' }}>Repeats</span>
-                            <div className="tags-list">
-                                {renderDays(activity.days)}
-                            </div>
-                        </div>
-                    )}
                 </div>
 
-                <div className="detail-actions">
+                <div className="detail-content">
+                    {activity.description && (
+                        <div style={{ marginBottom: '32px', fontSize: '16px', lineHeight: '1.6', color: '#ddd' }}>
+                            {activity.description}
+                        </div>
+                    )}
+
+                    <div style={{ marginBottom: '24px' }}>
+                        <div className="detail-label">Location</div>
+                        <div className="detail-value">{activity.location || 'Remote / Not specified'}</div>
+                    </div>
+
+                    <div style={{ marginBottom: '24px' }}>
+                        <div className="detail-label">Tags</div>
+                        <div className="tags-list">
+                            {activity.tags && activity.tags.length > 0 ? (
+                                activity.tags.map(tag => (
+                                    <span key={tag} className="tag-chip">{tag}</span>
+                                ))
+                            ) : (
+                                <span style={{ color: 'rgba(255,255,255,0.3)' }}>No tags</span>
+                            )}
+                        </div>
+                    </div>
+
+                    <div style={{ marginBottom: '24px' }}>
+                        <div className="detail-label">Repeats</div>
+                        <div className="detail-value">
+                            {activity.days && activity.days.length > 0 ? (
+                                activity.days.join(', ')
+                            ) : (
+                                'Does not repeat'
+                            )}
+                        </div>
+                    </div>
+                </div>
+
+                <div className="detail-actions" style={{ marginTop: 'auto', paddingTop: '32px' }}>
                     <button
                         className="action-button primary"
                         onClick={() => setIsEditing(true)}
-                        style={{ flex: 1 }}
+                        style={{ width: '100%', marginBottom: '12px', justifyContent: 'center' }}
                     >
-                        Edit
+                        Edit Activity
                     </button>
                     <button
                         className="action-button secondary"
                         onClick={() => onDelete(activity.id)}
-                        style={{ flex: 1 }}
+                        style={{ width: '100%', justifyContent: 'center', border: 'none', color: '#ff3333' }}
                     >
                         Delete
                     </button>
@@ -263,108 +243,103 @@ export default function DetailsSheet({ activity, isOpen, onClose, onSave, onDele
 
     const renderEdit = () => (
         <div className="detail-container edit-container">
-            <button
-                className="close-panel-btn"
-                onClick={() => setIsEditing(false)}
-                aria-label="Cancel editing"
-            >
-                <X size={20} />
-            </button>
-
             <header className="detail-header">
                 <h2>Edit Activity</h2>
-                <p style={{ color: 'var(--text-muted)', fontSize: '0.875rem', marginTop: '8px' }}>
-                    Modify the details below
-                </p>
+                <p style={{ color: 'rgba(255,255,255,0.5)', fontSize: '14px' }}>Modify the details below</p>
             </header>
 
-            <div className="form-group">
-                <label htmlFor="edit-title">Title</label>
-                <input
-                    id="edit-title"
-                    type="text"
-                    value={editData.title || ''}
-                    onChange={e => setEditData({ ...editData, title: e.target.value })}
-                    placeholder="Activity name"
-                />
-            </div>
-
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
+            <div className="form-content">
                 <div className="form-group">
-                    <label htmlFor="edit-start">Start Time</label>
+                    <label htmlFor="edit-title">Title</label>
                     <input
-                        id="edit-start"
-                        type="time"
-                        value={editData.startTime || ''}
-                        onChange={e => setEditData({ ...editData, startTime: e.target.value })}
+                        id="edit-title"
+                        type="text"
+                        value={editData.title || ''}
+                        onChange={e => setEditData({ ...editData, title: e.target.value })}
+                        placeholder="Activity name"
+                        autoFocus
                     />
                 </div>
+
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
+                    <div className="form-group">
+                        <label htmlFor="edit-start">Start Time</label>
+                        <input
+                            id="edit-start"
+                            type="time"
+                            value={editData.startTime || ''}
+                            onChange={e => setEditData({ ...editData, startTime: e.target.value })}
+                        />
+                    </div>
+                    <div className="form-group">
+                        <label htmlFor="edit-end">End Time</label>
+                        <input
+                            id="edit-end"
+                            type="time"
+                            value={editData.endTime || ''}
+                            onChange={e => setEditData({ ...editData, endTime: e.target.value })}
+                        />
+                    </div>
+                </div>
+
                 <div className="form-group">
-                    <label htmlFor="edit-end">End Time</label>
+                    <label htmlFor="edit-location">Location</label>
                     <input
-                        id="edit-end"
-                        type="time"
-                        value={editData.endTime || ''}
-                        onChange={e => setEditData({ ...editData, endTime: e.target.value })}
+                        id="edit-location"
+                        type="text"
+                        value={editData.location || ''}
+                        onChange={e => setEditData({ ...editData, location: e.target.value })}
+                        placeholder="Where will this happen?"
+                    />
+                </div>
+
+                <div className="form-group">
+                    <label htmlFor="edit-tags">Tags</label>
+                    <input
+                        id="edit-tags"
+                        type="text"
+                        value={Array.isArray(editData.tags) ? editData.tags.join(', ') : (editData.tags || '')}
+                        onChange={e => setEditData({ ...editData, tags: e.target.value })}
+                        placeholder="startup, portfolio"
+                    />
+                </div>
+
+                <div className="form-group">
+                    <label htmlFor="edit-days">Repeat Days</label>
+                    <input
+                        id="edit-days"
+                        type="text"
+                        value={Array.isArray(editData.days) ? editData.days.join(', ') : (editData.days || '')}
+                        onChange={e => setEditData({ ...editData, days: e.target.value })}
+                        placeholder="Friday"
+                    />
+                </div>
+
+                <div className="form-group">
+                    <label htmlFor="edit-description">Notes</label>
+                    <textarea
+                        id="edit-description"
+                        value={editData.description || ''}
+                        onChange={e => setEditData({ ...editData, description: e.target.value })}
+                        placeholder="Additional details..."
+                        style={{ minHeight: '120px', resize: 'vertical' }}
                     />
                 </div>
             </div>
 
-            <div className="form-group">
-                <label htmlFor="edit-location">Location</label>
-                <input
-                    id="edit-location"
-                    type="text"
-                    value={editData.location || ''}
-                    onChange={e => setEditData({ ...editData, location: e.target.value })}
-                    placeholder="Where will this happen?"
-                />
-            </div>
-
-            <div className="form-group">
-                <label htmlFor="edit-tags">Tags</label>
-                <input
-                    id="edit-tags"
-                    type="text"
-                    value={Array.isArray(editData.tags) ? editData.tags.join(', ') : (editData.tags || '')}
-                    onChange={e => setEditData({ ...editData, tags: e.target.value })}
-                    placeholder="work, health, personal"
-                />
-            </div>
-
-            <div className="form-group">
-                <label htmlFor="edit-days">Repeat Days</label>
-                <input
-                    id="edit-days"
-                    type="text"
-                    value={Array.isArray(editData.days) ? editData.days.join(', ') : (editData.days || '')}
-                    onChange={e => setEditData({ ...editData, days: e.target.value })}
-                    placeholder="Monday, Wednesday, Friday"
-                />
-            </div>
-
-            <div className="form-group">
-                <label htmlFor="edit-description">Notes</label>
-                <textarea
-                    id="edit-description"
-                    value={editData.description || ''}
-                    onChange={e => setEditData({ ...editData, description: e.target.value })}
-                    placeholder="Additional details..."
-                    style={{ minHeight: '100px' }}
-                />
-            </div>
-
-            <div className="detail-actions">
+            <div className="detail-actions" style={{ marginTop: '32px', display: 'flex', gap: '16px' }}>
                 <button
                     className="action-button primary"
                     onClick={handleSave}
                     disabled={saveStatus !== 'idle'}
+                    style={{ flex: 2, justifyContent: 'center' }}
                 >
-                    {saveStatus === 'saving' ? 'Saving...' : saveStatus === 'saved' ? 'Saved ✓' : 'Save Changes'}
+                    {saveStatus === 'saving' ? 'Saving...' : 'Save Changes'}
                 </button>
                 <button
                     className="action-button secondary"
                     onClick={() => setIsEditing(false)}
+                    style={{ flex: 1, justifyContent: 'center' }}
                 >
                     Cancel
                 </button>
@@ -413,7 +388,7 @@ export default function DetailsSheet({ activity, isOpen, onClose, onSave, onDele
                     <div style={{
                         width: '32px',
                         height: '4px',
-                        background: 'var(--border-light)',
+                        background: 'rgba(255,255,255,0.2)',
                         borderRadius: '2px',
                     }} />
                 </div>

@@ -1,18 +1,23 @@
 import React, { useEffect, useRef, useState } from 'react';
 
-// Floating orbs component for atmospheric effect
-function FloatingOrbs() {
+// Neon Nebulas
+function NeonOrbs() {
     return (
-        <div className="floating-orbs" aria-hidden="true">
-            <div className="orb orb-1" />
-            <div className="orb orb-2" />
-            <div className="orb orb-3" />
+        <div className="floating-orbs" style={{ display: 'block' }}>
+            <div className="orb orb-1" style={{
+                background: 'radial-gradient(circle, rgba(112,0,255,0.4) 0%, transparent 70%)',
+                animationDuration: '10s'
+            }} />
+            <div className="orb orb-2" style={{
+                background: 'radial-gradient(circle, rgba(0,240,255,0.3) 0%, transparent 70%)',
+                animationDuration: '15s'
+            }} />
         </div>
     );
 }
 
-// Animated clock display
-function LiveClock() {
+// Block Timestamp
+function BlockClock() {
     const [time, setTime] = useState(new Date());
 
     useEffect(() => {
@@ -20,29 +25,25 @@ function LiveClock() {
         return () => clearInterval(interval);
     }, []);
 
-    const hours = time.getHours().toString().padStart(2, '0');
-    const minutes = time.getMinutes().toString().padStart(2, '0');
-    const seconds = time.getSeconds().toString().padStart(2, '0');
+    const format = (n) => n.toString().padStart(2, '0');
 
     return (
-        <div className="live-clock fade-in-up" style={{ animationDelay: '0.4s' }}>
-            <span className="clock-segment">{hours}</span>
-            <span className="clock-separator">:</span>
-            <span className="clock-segment">{minutes}</span>
-            <span className="clock-separator blink">:</span>
-            <span className="clock-segment clock-seconds">{seconds}</span>
-        </div>
-    );
-}
-
-// Scroll indicator
-function ScrollIndicator() {
-    return (
-        <div className="scroll-indicator fade-in-up" style={{ animationDelay: '0.6s' }}>
-            <div className="scroll-mouse">
-                <div className="scroll-wheel" />
-            </div>
-            <span>Scroll</span>
+        <div className="live-clock fade-in-up" style={{
+            animationDelay: '0.4s',
+            fontFamily: "'JetBrains Mono', monospace",
+            background: 'rgba(0,0,0,0.5)',
+            border: '1px solid var(--accent-primary)',
+            padding: '12px 24px',
+            borderRadius: '8px',
+            color: '#fff',
+            textShadow: '0 0 10px var(--accent-primary)',
+            marginTop: '40px',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '12px'
+        }}>
+            <span style={{ color: 'var(--accent-secondary)', fontSize: '0.8em' }}>BLOCK_TIME:</span>
+            <span>{format(time.getHours())}:{format(time.getMinutes())}:{format(time.getSeconds())}</span>
         </div>
     );
 }
@@ -51,7 +52,7 @@ export default function LandingPage({ onLogin }) {
     const [mousePosition, setMousePosition] = useState({ x: 0, y: 0 });
     const heroRef = useRef(null);
 
-    // Track mouse for subtle parallax
+    // Parallax
     useEffect(() => {
         const handleMouseMove = (e) => {
             if (heroRef.current) {
@@ -68,77 +69,64 @@ export default function LandingPage({ onLogin }) {
 
     return (
         <div className="landing-page">
-            <FloatingOrbs />
+            <NeonOrbs />
 
             <div className="landing-scroll-container">
-                {/* Hero Section */}
                 <section className="landing-section" ref={heroRef}>
                     <div
                         className="hero-content"
                         style={{
-                            transform: `translate(${mousePosition.x * -10}px, ${mousePosition.y * -10}px)`
+                            transform: `translate(${mousePosition.x * -15}px, ${mousePosition.y * -15}px)`
                         }}
                     >
                         <div className="hero-badge fade-in-up">
-                            <span className="badge-dot" />
-                            Personal Time Editor
+                            <span className="badge-dot" style={{ background: '#00ff9d', boxShadow: '0 0 10px #00ff9d' }}></span>
+                            <span>PROTOCOL V2.0</span>
                         </div>
 
                         <h1 className="brand-title fade-in-up" style={{ animationDelay: '0.1s' }}>
-                            crastinat
+                            CRASTINAT
                         </h1>
 
-                        <p className="brand-tagline fade-in-up" style={{ animationDelay: '0.2s' }}>
-                            If it's not on the timeline, it doesn't exist.
+                        <p className="brand-tagline fade-in-up" style={{
+                            animationDelay: '0.2s',
+                            fontFamily: "'Space Grotesk', sans-serif",
+                            fontSize: '18px',
+                            color: 'var(--text-secondary)',
+                            letterSpacing: '0.05em'
+                        }}>
+                            THE DECENTRALIZED TIME LAYER.
                         </p>
 
-                        <LiveClock />
+                        <BlockClock />
                     </div>
 
-                    <ScrollIndicator />
-                </section>
-
-                {/* Philosophy Section */}
-                <section className="landing-section philosophy-section">
-                    <div className="philosophy-grid">
-                        <div className="philosophy-card fade-in-up">
-                            <div className="card-number">01</div>
-                            <h3>Visualize</h3>
-                            <p>See your entire day as an editable timeline. Time becomes tangible.</p>
-                        </div>
-                        <div className="philosophy-card fade-in-up" style={{ animationDelay: '0.1s' }}>
-                            <div className="card-number">02</div>
-                            <h3>Command</h3>
-                            <p>Speak naturally. "Swimming at 5pm for 2 hours" — done.</p>
-                        </div>
-                        <div className="philosophy-card fade-in-up" style={{ animationDelay: '0.2s' }}>
-                            <div className="card-number">03</div>
-                            <h3>Execute</h3>
-                            <p>Turn intentions into commitments. What's scheduled, happens.</p>
-                        </div>
-                    </div>
-                </section>
-
-                {/* CTA Section */}
-                <section className="landing-section signin-section">
-                    <div className="cta-content">
-                        <h2 className="fade-in-up">Ready to own your time?</h2>
-                        <p className="fade-in-up" style={{ animationDelay: '0.1s' }}>
-                            Stop planning. Start living.
-                        </p>
+                    {/* CTA Section */}
+                    <div className="fade-in-up" style={{ position: 'absolute', bottom: '15vh', width: '100%', textAlign: 'center', animationDelay: '0.5s', zIndex: 10 }}>
                         <button
-                            className="hero-cta fade-in-up"
-                            style={{ animationDelay: '0.2s' }}
+                            className="hero-cta"
                             onClick={onLogin}
+                            style={{
+                                background: 'linear-gradient(90deg, #7000ff, #00f0ff)',
+                                color: '#fff',
+                                padding: '16px 48px',
+                                borderRadius: '30px',
+                                fontWeight: 700,
+                                fontSize: '16px',
+                                letterSpacing: '0.1em',
+                                border: 'none',
+                                cursor: 'pointer',
+                                boxShadow: '0 0 30px rgba(112, 0, 255, 0.5)',
+                                textTransform: 'uppercase'
+                            }}
                         >
-                            <span className="cta-text">Sign in with Google</span>
-                            <span className="cta-arrow">→</span>
+                            Connect Identity
                         </button>
 
-                        <div className="trust-badges fade-in-up" style={{ animationDelay: '0.3s' }}>
-                            <span>🔒 Secure</span>
-                            <span>📅 Syncs with Calendar</span>
-                            <span>🤖 AI-Powered</span>
+                        <div className="trust-badges" style={{ marginTop: '32px', opacity: 0.7 }}>
+                            <span style={{ color: 'var(--accent-secondary)' }}>zk-Sync Ready</span>
+                            <span style={{ margin: '0 12px', color: '#555' }}>//</span>
+                            <span style={{ color: 'var(--accent-secondary)' }}>Zero Latency</span>
                         </div>
                     </div>
                 </section>
