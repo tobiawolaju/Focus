@@ -14,6 +14,10 @@ function convertToISO(timeStr) {
     const now = new Date();
     const [hours, minutes] = timeStr.split(':');
     now.setHours(parseInt(hours, 10), parseInt(minutes, 10), 0, 0);
+
+    // Google Calendar needs RFC3339. toISOString() provides this in UTC.
+    // If we want to support user's local timezone, we'd need to offset it or use a library.
+    // For now, we'll keep UTC but ensure it's a valid string.
     return now.toISOString();
 }
 
@@ -60,6 +64,8 @@ const tools = {
             color: "#" + Math.floor(Math.random() * 16777215).toString(16) // Random Hex Color
         };
 
+        let calendarSync = { success: true };
+
         // Add to Google Calendar
         if (accessToken) {
             try {
@@ -70,7 +76,7 @@ const tools = {
                     description: description,
                     start: {
                         dateTime: convertToISO(startTime),
-                        timeZone: 'UTC', // Ideally, get user's timezone from frontend
+                        timeZone: 'UTC',
                     },
                     end: {
                         dateTime: convertToISO(endTime),
@@ -90,15 +96,20 @@ const tools = {
 
             } catch (err) {
                 console.error("Failed to add to Google Calendar:", err.message);
-                // We continue adding to DB even if Calendar fails
+                calendarSync = { success: false, error: err.message };
             }
         }
 
-        // Save to Firebase (Re-saving the whole array to keep indices clean)
+        // Save to Firebase
         activitiesArray.push(newActivity);
         await ref.set(activitiesArray);
 
-        return { success: true, message: "Activity added.", activity: newActivity };
+        return {
+            success: true,
+            message: calendarSync.success ? "Activity added and synced." : "Activity added to DB, but Calendar sync failed.",
+            activity: newActivity,
+            calendarError: calendarSync.error
+        };
     },
 
     updateActivity: async ({ id, ...updates }, context) => {
@@ -119,6 +130,8 @@ const tools = {
         const updatedActivity = { ...originalActivity, ...updates };
         activities[index] = updatedActivity;
 
+        let calendarSync = { success: true };
+
         // Update Google Calendar
         if (accessToken && originalActivity.googleEventId) {
             try {
@@ -127,8 +140,8 @@ const tools = {
                 if (updates.title) eventPatch.summary = updates.title;
                 if (updates.description) eventPatch.description = updates.description;
                 if (updates.location) eventPatch.location = updates.location;
-                if (updates.startTime) eventPatch.start = { dateTime: convertToISO(updatedActivity.startTime) };
-                if (updates.endTime) eventPatch.end = { dateTime: convertToISO(updatedActivity.endTime) };
+                if (updates.startTime) eventPatch.start = { dateTime: convertToISO(updatedActivity.startTime), timeZone: 'UTC' };
+                if (updates.endTime) eventPatch.end = { dateTime: convertToISO(updatedActivity.endTime), timeZone: 'UTC' };
 
                 await calendar.events.patch({
                     calendarId: 'primary',
@@ -138,11 +151,17 @@ const tools = {
                 console.log("Google Calendar event updated");
             } catch (err) {
                 console.error("Failed to update Google Calendar:", err.message);
+                calendarSync = { success: false, error: err.message };
             }
         }
 
         await ref.set(activities);
-        return { success: true, message: "Activity updated.", activity: updatedActivity };
+        return {
+            success: true,
+            message: calendarSync.success ? "Activity updated." : "Updated in DB, but Calendar update failed.",
+            activity: updatedActivity,
+            calendarError: calendarSync.error
+        };
     },
 
     deleteActivity: async ({ id }, context) => {
@@ -160,6 +179,8 @@ const tools = {
 
         const newActivities = activities.filter(a => a.id !== parseInt(id));
 
+        let calendarSync = { success: true };
+
         // Delete from Google Calendar
         if (accessToken && activityToDelete.googleEventId) {
             try {
@@ -171,11 +192,16 @@ const tools = {
                 console.log("Google Calendar event deleted");
             } catch (err) {
                 console.error("Failed to delete from Google Calendar:", err.message);
+                calendarSync = { success: false, error: err.message };
             }
         }
 
         await ref.set(newActivities);
-        return { success: true, message: "Activity deleted." };
+        return {
+            success: true,
+            message: calendarSync.success ? "Activity deleted." : "Deleted from DB, but Calendar deletion failed.",
+            calendarError: calendarSync.error
+        };
     },
 
     findHackathons: async ({ query }) => {

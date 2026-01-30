@@ -214,6 +214,7 @@ app.post("/api/chat", async (req, res) => {
 
         let result = null;
         let refreshNeeded = false;
+        let reply = "Done ✅";
         const context = { uid: userId, accessToken };
 
         switch (intent) {
@@ -239,46 +240,36 @@ app.post("/api/chat", async (req, res) => {
                 const successCount = responses.filter(r => r.success).length;
                 const failCount = responses.length - successCount;
 
-                let replyMessage = "";
                 if (successCount > 0 && failCount === 0) {
-                    replyMessage = responses.length > 1 ? "Done! I've added all your tasks." : "Done! Added the activity.";
+                    reply = responses.length > 1 ? "Done! I've added all your tasks." : "Done! Added the activity.";
                 } else if (successCount > 0 && failCount > 0) {
-                    replyMessage = `Partially successful. Added ${successCount} tasks, but ${failCount} failed.`;
+                    reply = `Partially successful. Added ${successCount} tasks, but ${failCount} failed.`;
                 } else {
                     const firstError = responses[0]?.error || "Unknown error";
-                    replyMessage = `I couldn't add that. Error: ${firstError}`;
+                    reply = `I couldn't add that. Error: ${firstError}`;
                 }
 
-                res.json({
-                    reply: replyMessage,
-                    result: {
-                        message: `Processed ${responses.length} requests.`,
-                        details: responses
-                    },
-                    refreshNeeded: successCount > 0
-                });
+                result = {
+                    message: `Processed ${responses.length} requests.`,
+                    details: responses
+                };
+                refreshNeeded = successCount > 0;
                 break;
             }
 
             case "updateActivity": {
                 const aliasedArgs = normalizeAliases(rawArgs);
                 result = await tools.updateActivity(aliasedArgs, context);
-                res.json({
-                    reply: result.success ? "Updated! ✅" : `Failed to update: ${result.message || result.error}`,
-                    result,
-                    refreshNeeded: !!result.success
-                });
+                reply = result.success ? "Updated! ✅" : `Failed to update: ${result.message || result.error}`;
+                refreshNeeded = !!result.success;
                 break;
             }
 
             case "deleteActivity": {
                 const aliasedArgs = normalizeAliases(rawArgs);
                 result = await tools.deleteActivity(aliasedArgs, context);
-                res.json({
-                    reply: result.success ? "Deleted! 🗑️" : `Failed to delete: ${result.message || result.error}`,
-                    result,
-                    refreshNeeded: !!result.success
-                });
+                reply = result.success ? "Deleted! 🗑️" : `Failed to delete: ${result.message || result.error}`;
+                refreshNeeded = !!result.success;
                 break;
             }
 
@@ -293,20 +284,23 @@ app.post("/api/chat", async (req, res) => {
             }
 
             default:
-                return res.json({ reply: "That action isn’t supported yet.", refreshNeeded: false });
+                reply = "That action isn’t supported yet.";
+                break;
         }
 
-        res.json({
-            reply: Array.isArray(rawArgs) && intent === "addActivity"
-                ? `Done! I've added your tasks.`
-                : "Done ✅",
-            result,
-            refreshNeeded
-        });
+        if (!res.headersSent) {
+            res.json({
+                reply,
+                result,
+                refreshNeeded
+            });
+        }
 
     } catch (err) {
         console.error("Chat error:", err);
-        res.status(500).json({ reply: err.message, refreshNeeded: false });
+        if (!res.headersSent) {
+            res.status(500).json({ reply: "An error occurred: " + err.message, refreshNeeded: false });
+        }
     }
 });
 
