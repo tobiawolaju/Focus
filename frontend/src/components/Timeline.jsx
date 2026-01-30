@@ -41,9 +41,16 @@ const TimeRuler = memo(({ zoom }) => (
     </div>
 ));
 
+// Smooth lerp function for animation
+function lerp(start, end, factor) {
+    return start + (end - start) * factor;
+}
+
 export default function Timeline({ activities, onSelectActivity }) {
     const containerRef = useRef(null);
     const [zoom, setZoom] = useState(1.0);
+    const targetZoomRef = useRef(1.0);
+    const animatingRef = useRef(false);
 
     // --- INITIAL SCROLL ---
     useLayoutEffect(() => {
@@ -58,11 +65,46 @@ export default function Timeline({ activities, onSelectActivity }) {
 
     const zoomRef = useRef(zoom);
     const lastTouchDistanceRef = useRef(0);
+    const scrollCenterRef = useRef({ clientX: 0, relativeX: 0 });
 
     // Sync ref with state
     useEffect(() => {
         zoomRef.current = zoom;
     }, [zoom]);
+
+    // Smooth zoom animation loop
+    const animateZoom = () => {
+        const el = containerRef.current;
+        if (!el) return;
+
+        const currentZoom = zoomRef.current;
+        const targetZoom = targetZoomRef.current;
+
+        // Check if we're close enough to target
+        if (Math.abs(currentZoom - targetZoom) < 0.001) {
+            animatingRef.current = false;
+            setZoom(targetZoom);
+            document.documentElement.style.setProperty('--zoom-level', targetZoom);
+            return;
+        }
+
+        // Smooth interpolation (0.15 = smoothing factor, higher = faster)
+        const newZoom = lerp(currentZoom, targetZoom, 0.15);
+
+        // Update scroll position to maintain center point
+        const { clientX, relativeX } = scrollCenterRef.current;
+        const rect = el.getBoundingClientRect();
+        const ratio = newZoom / currentZoom;
+        const newRelativeX = relativeX * ratio;
+
+        setZoom(newZoom);
+        document.documentElement.style.setProperty('--zoom-level', newZoom);
+
+        // Adjust scroll to maintain position under cursor
+        el.scrollLeft = newRelativeX - (clientX - rect.left);
+
+        requestAnimationFrame(animateZoom);
+    };
 
     // --- ZOOM LOGIC ---
     useEffect(() => {
@@ -70,31 +112,33 @@ export default function Timeline({ activities, onSelectActivity }) {
         if (!el) return;
 
         const applyZoom = (newZoom, centerX) => {
-            const minZoom = 0.1;
-            const maxZoom = 5.0;
+            const minZoom = 0.15;
+            const maxZoom = 4.0;
             const clamped = Math.max(minZoom, Math.min(maxZoom, newZoom));
 
-            if (clamped === zoomRef.current) return;
+            if (clamped === targetZoomRef.current) return;
 
             const rect = el.getBoundingClientRect();
             const relativeX = centerX - rect.left + el.scrollLeft;
-            const ratio = clamped / zoomRef.current;
 
-            setZoom(clamped);
-            document.documentElement.style.setProperty('--zoom-level', clamped);
+            // Store the center point for smooth animation
+            scrollCenterRef.current = { clientX: centerX, relativeX };
+            targetZoomRef.current = clamped;
 
-            // Sync scroll
-            requestAnimationFrame(() => {
-                el.scrollLeft = relativeX * ratio - (centerX - rect.left);
-            });
+            // Start animation if not already running
+            if (!animatingRef.current) {
+                animatingRef.current = true;
+                requestAnimationFrame(animateZoom);
+            }
         };
 
         const handleWheel = (e) => {
             if (e.ctrlKey || e.metaKey) {
                 e.preventDefault();
                 const delta = -e.deltaY;
-                const factor = delta > 0 ? 1.1 : 0.9;
-                applyZoom(zoomRef.current * factor, e.clientX);
+                // Smaller zoom steps for smoother feel
+                const factor = delta > 0 ? 1.08 : 0.92;
+                applyZoom(targetZoomRef.current * factor, e.clientX);
             }
         };
 
@@ -118,7 +162,9 @@ export default function Timeline({ activities, onSelectActivity }) {
 
                 if (lastTouchDistanceRef.current > 0) {
                     const factor = distance / lastTouchDistanceRef.current;
-                    applyZoom(zoomRef.current * factor, centerX);
+                    // Dampen the touch zoom for smoother feel
+                    const dampedFactor = 1 + (factor - 1) * 0.5;
+                    applyZoom(targetZoomRef.current * dampedFactor, centerX);
                 }
                 lastTouchDistanceRef.current = distance;
             }
@@ -191,4 +237,3 @@ export default function Timeline({ activities, onSelectActivity }) {
         </div>
     );
 }
-
