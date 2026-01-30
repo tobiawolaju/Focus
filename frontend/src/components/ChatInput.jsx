@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Mic, Send } from 'lucide-react';
+import { Send, Sparkles } from 'lucide-react';
 
 export default function ChatInput({ onSendMessage, isProcessing }) {
     const [message, setMessage] = useState('');
@@ -8,12 +8,12 @@ export default function ChatInput({ onSendMessage, isProcessing }) {
     useEffect(() => {
         if (textareaRef.current) {
             textareaRef.current.style.height = 'auto';
-            textareaRef.current.style.height = `${Math.min(textareaRef.current.scrollHeight, 200)}px`;
+            textareaRef.current.style.height = `${Math.min(textareaRef.current.scrollHeight, 160)}px`;
         }
     }, [message]);
 
     const handleSubmit = () => {
-        if (message.trim()) {
+        if (message.trim() && !isProcessing) {
             onSendMessage(message);
             setMessage('');
         }
@@ -25,7 +25,7 @@ export default function ChatInput({ onSendMessage, isProcessing }) {
                 ref={textareaRef}
                 id="chat-input"
                 rows="1"
-                placeholder={isProcessing ? "Thinking..." : "What's on your mind?"}
+                placeholder={isProcessing ? "Planning your time..." : "Schedule something..."}
                 value={message}
                 onChange={(e) => setMessage(e.target.value)}
                 disabled={isProcessing}
@@ -40,8 +40,13 @@ export default function ChatInput({ onSendMessage, isProcessing }) {
                 className="action-btn"
                 onClick={handleSubmit}
                 disabled={isProcessing}
+                aria-label={message.trim() ? "Send message" : "Voice input"}
             >
-                {message.trim().length > 0 ? <Send size={18} /> : <Mic size={18} />}
+                {isProcessing ? (
+                    <Sparkles size={18} className="animate-pulse" />
+                ) : (
+                    <Send size={18} />
+                )}
             </button>
         </div>
     );

@@ -1,10 +1,10 @@
 import React, { useState, useEffect } from 'react';
-import { X, Clock, MapPin } from 'lucide-react';
+import { X, Clock, MapPin, Calendar } from 'lucide-react';
 
 export default function DetailsSheet({ activity, isOpen, onClose, onSave, onDelete }) {
     const [isEditing, setIsEditing] = useState(false);
     const [editData, setEditData] = useState(activity || {});
-    const [saveStatus, setSaveStatus] = useState('idle'); // 'idle', 'saving', 'saved'
+    const [saveStatus, setSaveStatus] = useState('idle');
 
     useEffect(() => {
         if (activity) {
@@ -14,25 +14,39 @@ export default function DetailsSheet({ activity, isOpen, onClose, onSave, onDele
         }
     }, [activity]);
 
+    // Close on Escape key
+    useEffect(() => {
+        const handleEsc = (e) => {
+            if (e.key === 'Escape' && isOpen) {
+                onClose();
+            }
+        };
+        window.addEventListener('keydown', handleEsc);
+        return () => window.removeEventListener('keydown', handleEsc);
+    }, [isOpen, onClose]);
+
     if (!activity && !editData.id) return null;
 
     const handleSave = async () => {
         setSaveStatus('saving');
         const updatedData = {
             ...editData,
-            tags: typeof editData.tags === 'string' ? editData.tags.split(',').map(t => t.trim()).filter(t => t) : editData.tags,
-            days: typeof editData.days === 'string' ? editData.days.split(',').map(t => t.trim()).filter(t => t) : editData.days
+            tags: typeof editData.tags === 'string'
+                ? editData.tags.split(',').map(t => t.trim()).filter(t => t)
+                : editData.tags,
+            days: typeof editData.days === 'string'
+                ? editData.days.split(',').map(t => t.trim()).filter(t => t)
+                : editData.days
         };
 
         try {
             await onSave(updatedData);
             setSaveStatus('saved');
-            // Wait 1 second before closing
             setTimeout(() => {
                 onClose();
                 setIsEditing(false);
                 setSaveStatus('idle');
-            }, 1000);
+            }, 800);
         } catch (error) {
             console.error("Failed to save:", error);
             setSaveStatus('idle');
@@ -42,31 +56,35 @@ export default function DetailsSheet({ activity, isOpen, onClose, onSave, onDele
 
     const getStatusColor = (status) => {
         const colors = {
-            'Completed': '#4CAF50',
-            'In Progress': '#2196F3',
-            'Pending': '#FFC107',
-            'Missed': '#F44336'
+            'Completed': 'var(--status-success)',
+            'In Progress': 'var(--status-info)',
+            'Pending': 'var(--status-warning)',
+            'Missed': 'var(--status-error)'
         };
-        return colors[status] || '#999';
+        return colors[status] || 'var(--text-muted)';
     };
 
-    const hexToRgba = (hex, alpha) => {
-        if (!hex || hex[0] !== '#') return hex;
+    const hexToRgba = (color, alpha) => {
+        if (!color) return `rgba(150, 150, 150, ${alpha})`;
+        if (color.startsWith('var(')) return color;
+        if (color[0] !== '#') return color;
+
         let r = 0, g = 0, b = 0;
-        if (hex.length === 4) {
-            r = parseInt(hex[1] + hex[1], 16);
-            g = parseInt(hex[2] + hex[2], 16);
-            b = parseInt(hex[3] + hex[3], 16);
+        if (color.length === 4) {
+            r = parseInt(color[1] + color[1], 16);
+            g = parseInt(color[2] + color[2], 16);
+            b = parseInt(color[3] + color[3], 16);
         } else {
-            r = parseInt(hex.slice(1, 3), 16);
-            g = parseInt(hex.slice(3, 5), 16);
-            b = parseInt(hex.slice(5, 7), 16);
+            r = parseInt(color.slice(1, 3), 16);
+            g = parseInt(color.slice(3, 5), 16);
+            b = parseInt(color.slice(5, 7), 16);
         }
         return `rgba(${r}, ${g}, ${b}, ${alpha})`;
     };
 
     const renderDays = (days) => {
         if (!days || days.length === 0) return null;
+
         const order = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
         const sortedDays = [...days].sort((a, b) => order.indexOf(a) - order.indexOf(b));
 
@@ -79,12 +97,16 @@ export default function DetailsSheet({ activity, isOpen, onClose, onSave, onDele
 
         return (
             <div className="detail-section">
-                <h3>Active Days</h3>
+                <h3>Schedule</h3>
                 <div className="tags-list">
                     {label ? (
                         <span className="tag-chip day-chip">{label}</span>
                     ) : (
-                        sortedDays.map(day => <span key={day} className="tag-chip day-chip">{day}</span>)
+                        sortedDays.map(day => (
+                            <span key={day} className="tag-chip day-chip">
+                                {day.slice(0, 3)}
+                            </span>
+                        ))
                     )}
                 </div>
             </div>
@@ -94,25 +116,34 @@ export default function DetailsSheet({ activity, isOpen, onClose, onSave, onDele
     const renderView = () => {
         if (!activity) return null;
         const statusColor = getStatusColor(activity.status);
+
         return (
             <div className="detail-container">
-                <button className="close-panel-btn" onClick={onClose} aria-label="Close">
+                <button
+                    className="close-panel-btn"
+                    onClick={onClose}
+                    aria-label="Close panel"
+                >
                     <X size={20} />
                 </button>
+
                 <header className="detail-header">
                     <div className="detail-title-row">
-                        <span className="status-chip" style={{
-                            backgroundColor: hexToRgba(statusColor, 0.1),
-                            color: statusColor,
-                            border: `1px solid ${hexToRgba(statusColor, 0.2)}`
-                        }}>
+                        <span
+                            className="status-chip"
+                            style={{
+                                backgroundColor: hexToRgba(statusColor, 0.12),
+                                color: statusColor,
+                                border: `1px solid ${hexToRgba(statusColor, 0.25)}`
+                            }}
+                        >
                             {activity.status || 'Scheduled'}
                         </span>
                         <h2>{activity.title}</h2>
                     </div>
                     <div className="detail-time">
                         <Clock size={16} />
-                        {activity.startTime} to {activity.endTime}
+                        <span>{activity.startTime} — {activity.endTime}</span>
                     </div>
                 </header>
 
@@ -128,7 +159,7 @@ export default function DetailsSheet({ activity, isOpen, onClose, onSave, onDele
                         <h3>Location</h3>
                         <div className="detail-value">
                             <MapPin size={16} />
-                            {activity.location || 'Remote / None'}
+                            <span>{activity.location || 'Not specified'}</span>
                         </div>
                     </div>
 
@@ -136,7 +167,9 @@ export default function DetailsSheet({ activity, isOpen, onClose, onSave, onDele
                         <div className="detail-section">
                             <h3>Tags</h3>
                             <div className="tags-list">
-                                {activity.tags.map(tag => <span key={tag} className="tag-chip">{tag}</span>)}
+                                {activity.tags.map(tag => (
+                                    <span key={tag} className="tag-chip">{tag}</span>
+                                ))}
                             </div>
                         </div>
                     )}
@@ -145,8 +178,18 @@ export default function DetailsSheet({ activity, isOpen, onClose, onSave, onDele
                 {renderDays(activity.days)}
 
                 <div className="detail-actions">
-                    <button className="action-button primary" onClick={() => setIsEditing(true)}>Edit Details</button>
-                    <button className="action-button secondary" onClick={() => onDelete(activity.id)}>Delete</button>
+                    <button
+                        className="action-button primary"
+                        onClick={() => setIsEditing(true)}
+                    >
+                        Edit
+                    </button>
+                    <button
+                        className="action-button secondary"
+                        onClick={() => onDelete(activity.id)}
+                    >
+                        Delete
+                    </button>
                 </div>
             </div>
         );
@@ -154,45 +197,95 @@ export default function DetailsSheet({ activity, isOpen, onClose, onSave, onDele
 
     const renderEdit = () => (
         <div className="detail-container edit-container">
+            <button
+                className="close-panel-btn"
+                onClick={() => setIsEditing(false)}
+                aria-label="Cancel editing"
+            >
+                <X size={20} />
+            </button>
+
             <header className="detail-header">
                 <h2>Edit Activity</h2>
-                <p style={{ color: 'var(--text-tertiary)', fontSize: '0.875rem' }}>Modify the details of your scheduled activity.</p>
+                <p style={{ color: 'var(--text-muted)', fontSize: '0.875rem', marginTop: '8px' }}>
+                    Modify the details below
+                </p>
             </header>
 
             <div className="form-group">
-                <label>Activity Title</label>
-                <input type="text" value={editData.title} onChange={e => setEditData({ ...editData, title: e.target.value })} />
+                <label htmlFor="edit-title">Title</label>
+                <input
+                    id="edit-title"
+                    type="text"
+                    value={editData.title || ''}
+                    onChange={e => setEditData({ ...editData, title: e.target.value })}
+                    placeholder="Activity name"
+                />
             </div>
 
-            <div className="form-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', marginBottom: '16px' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
                 <div className="form-group">
-                    <label>Start Time</label>
-                    <input type="time" value={editData.startTime} onChange={e => setEditData({ ...editData, startTime: e.target.value })} />
+                    <label htmlFor="edit-start">Start Time</label>
+                    <input
+                        id="edit-start"
+                        type="time"
+                        value={editData.startTime || ''}
+                        onChange={e => setEditData({ ...editData, startTime: e.target.value })}
+                    />
                 </div>
                 <div className="form-group">
-                    <label>End Time</label>
-                    <input type="time" value={editData.endTime} onChange={e => setEditData({ ...editData, endTime: e.target.value })} />
+                    <label htmlFor="edit-end">End Time</label>
+                    <input
+                        id="edit-end"
+                        type="time"
+                        value={editData.endTime || ''}
+                        onChange={e => setEditData({ ...editData, endTime: e.target.value })}
+                    />
                 </div>
             </div>
 
             <div className="form-group">
-                <label>Location</label>
-                <input type="text" value={editData.location || ''} onChange={e => setEditData({ ...editData, location: e.target.value })} />
+                <label htmlFor="edit-location">Location</label>
+                <input
+                    id="edit-location"
+                    type="text"
+                    value={editData.location || ''}
+                    onChange={e => setEditData({ ...editData, location: e.target.value })}
+                    placeholder="Where will this happen?"
+                />
             </div>
 
             <div className="form-group">
-                <label>Tags (comma separated)</label>
-                <input type="text" value={Array.isArray(editData.tags) ? editData.tags.join(', ') : (editData.tags || '')} onChange={e => setEditData({ ...editData, tags: e.target.value })} />
+                <label htmlFor="edit-tags">Tags</label>
+                <input
+                    id="edit-tags"
+                    type="text"
+                    value={Array.isArray(editData.tags) ? editData.tags.join(', ') : (editData.tags || '')}
+                    onChange={e => setEditData({ ...editData, tags: e.target.value })}
+                    placeholder="work, health, personal"
+                />
             </div>
 
             <div className="form-group">
-                <label>Recurrence Days (comma separated)</label>
-                <input type="text" value={Array.isArray(editData.days) ? editData.days.join(', ') : (editData.days || '')} onChange={e => setEditData({ ...editData, days: e.target.value })} />
+                <label htmlFor="edit-days">Repeat Days</label>
+                <input
+                    id="edit-days"
+                    type="text"
+                    value={Array.isArray(editData.days) ? editData.days.join(', ') : (editData.days || '')}
+                    onChange={e => setEditData({ ...editData, days: e.target.value })}
+                    placeholder="Monday, Wednesday, Friday"
+                />
             </div>
 
             <div className="form-group">
-                <label>Notes / Description</label>
-                <textarea value={editData.description || ''} onChange={e => setEditData({ ...editData, description: e.target.value })} style={{ minHeight: '100px' }} />
+                <label htmlFor="edit-description">Notes</label>
+                <textarea
+                    id="edit-description"
+                    value={editData.description || ''}
+                    onChange={e => setEditData({ ...editData, description: e.target.value })}
+                    placeholder="Additional details..."
+                    style={{ minHeight: '100px' }}
+                />
             </div>
 
             <div className="detail-actions">
@@ -203,15 +296,29 @@ export default function DetailsSheet({ activity, isOpen, onClose, onSave, onDele
                 >
                     {saveStatus === 'saving' ? 'Saving...' : saveStatus === 'saved' ? 'Saved ✓' : 'Save Changes'}
                 </button>
-                <button className="action-button secondary" onClick={() => setIsEditing(false)}>Cancel</button>
+                <button
+                    className="action-button secondary"
+                    onClick={() => setIsEditing(false)}
+                >
+                    Cancel
+                </button>
             </div>
         </div>
     );
 
     return (
         <>
-            <div className={`details-panel-overlay ${isOpen ? 'active' : ''}`} onClick={onClose}></div>
-            <div className={`details-panel ${isOpen ? 'open' : ''}`}>
+            <div
+                className={`details-panel-overlay ${isOpen ? 'active' : ''}`}
+                onClick={onClose}
+                aria-hidden="true"
+            />
+            <div
+                className={`details-panel ${isOpen ? 'open' : ''}`}
+                role="dialog"
+                aria-modal="true"
+                aria-labelledby="details-title"
+            >
                 {isEditing ? renderEdit() : renderView()}
             </div>
         </>
