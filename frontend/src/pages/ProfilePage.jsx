@@ -1,8 +1,37 @@
-import React from 'react';
-import { ArrowLeft, LogOut } from 'lucide-react';
+import React, { useState } from 'react';
+import { ArrowLeft, LogOut, Sparkles, Loader2 } from 'lucide-react';
 import './ProfilePage.css';
 
+const API_BASE_URL = window.location.hostname === 'localhost'
+    ? 'http://localhost:3000'
+    : 'https://to-do-iun8.onrender.com';
+
 export default function ProfilePage({ user, accessToken, onLogout, onBack }) {
+    const [prediction, setPrediction] = useState('');
+    const [loading, setLoading] = useState(false);
+
+    const handlePredict = async () => {
+        setLoading(true);
+        try {
+            const response = await fetch(`${API_BASE_URL}/api/predict-future`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ userId: user.uid, accessToken })
+            });
+            const data = await response.json();
+            if (data.prediction) {
+                setPrediction(data.prediction);
+            } else {
+                setPrediction("I couldn't generate a prediction right now. Try adding more tasks to your schedule!");
+            }
+        } catch (err) {
+            console.error("Prediction failed:", err);
+            setPrediction("Failed to connect to the prediction engine.");
+        } finally {
+            setLoading(false);
+        }
+    };
+
     return (
         <div className="app-container">
             <header>
@@ -69,32 +98,65 @@ export default function ProfilePage({ user, accessToken, onLogout, onBack }) {
                     {user?.email}
                 </p>
 
-                {/* DEBUG SECTION */}
+                {/* FUTURE PREDICTOR SECTION */}
                 <div style={{
                     marginTop: '20px',
-                    padding: '20px',
-                    backgroundColor: 'rgba(255, 255, 255, 0.05)',
+                    padding: '32px 24px',
+                    backgroundColor: 'rgba(255, 255, 255, 0.03)',
                     border: '1px solid var(--border-visible)',
-                    borderRadius: '8px',
+                    borderRadius: '12px',
                     width: '100%',
                     maxWidth: '600px',
-                    textAlign: 'left',
-                    fontFamily: 'var(--font-mono)',
-                    fontSize: '0.75rem'
+                    textAlign: 'left'
                 }}>
-                    <h3 style={{ marginBottom: '12px', fontSize: '1rem', color: 'var(--text-primary)' }}>Debug Info (Testing Only)</h3>
-
-                    <div style={{ marginBottom: '16px' }}>
-                        <label style={{ display: 'block', color: 'var(--text-muted)', marginBottom: '4px' }}>User ID:</label>
-                        <code style={{ display: 'block', padding: '8px', backgroundColor: '#000', borderRadius: '4px', wordBreak: 'break-all' }}>{user?.uid}</code>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '16px' }}>
+                        <Sparkles size={24} style={{ color: '#9333ea' }} />
+                        <h3 style={{ fontSize: '1.25rem', fontWeight: '600', color: 'var(--text-primary)', margin: 0 }}>
+                            Future Predictor
+                        </h3>
                     </div>
 
-                    <div>
-                        <label style={{ display: 'block', color: 'var(--text-muted)', marginBottom: '4px' }}>Access Token:</label>
-                        <code style={{ display: 'block', padding: '8px', backgroundColor: '#000', borderRadius: '4px', wordBreak: 'break-all', maxHeight: '100px', overflowY: 'auto' }}>{accessToken}</code>
-                    </div>
+                    <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem', marginBottom: '24px', lineHeight: '1.5' }}>
+                        Analyze your schedule patterns to forecast your trajectory in health, career, and finance over the next 6 months.
+                    </p>
 
-                    <p style={{ marginTop: '16px', color: '#ff4444', fontSize: '0.7rem' }}>⚠️ This info is sensitive. Remove this section after testing.</p>
+                    {prediction && (
+                        <div style={{
+                            marginBottom: '24px',
+                            padding: '20px',
+                            backgroundColor: 'rgba(0,0,0,0.2)',
+                            borderRadius: '8px',
+                            borderLeft: '4px solid #9333ea',
+                            fontSize: '0.95rem',
+                            color: 'var(--text-primary)',
+                            lineHeight: '1.7',
+                            whiteSpace: 'pre-wrap'
+                        }}>
+                            {prediction}
+                        </div>
+                    )}
+
+                    <button
+                        onClick={handlePredict}
+                        disabled={loading}
+                        className="action-button primary"
+                        style={{
+                            width: '100%',
+                            height: '48px',
+                            justifyContent: 'center',
+                            fontSize: '1rem',
+                            fontWeight: '600'
+                        }}
+                    >
+                        {loading ? (
+                            <>
+                                <Loader2 className="animate-spin" size={20} style={{ marginRight: '8px' }} />
+                                Analyzing your life...
+                            </>
+                        ) : (
+                            '✨ Predict My Future'
+                        )}
+                    </button>
                 </div>
             </main>
         </div>

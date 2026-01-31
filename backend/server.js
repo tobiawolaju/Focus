@@ -305,6 +305,50 @@ app.post("/api/chat", async (req, res) => {
 });
 
 // --------------------
+// Prediction API
+// --------------------
+app.post("/api/predict-future", async (req, res) => {
+    try {
+        const { userId, accessToken } = req.body;
+        if (!userId) {
+            return res.status(400).json({ error: "userId required" });
+        }
+
+        const context = { uid: userId, accessToken };
+        const schedule = await tools.getSchedule({}, context);
+
+        if (!schedule || schedule.length === 0) {
+            return res.json({ prediction: "Your schedule is empty! I need some data to predict your future. Start by adding some daily activities." });
+        }
+
+        const prompt = `
+            You are a visionary life strategist. 
+            Analyze the following weekly schedule and activities of a user.
+            Schedule: ${JSON.stringify(schedule, null, 2)}
+            
+            Based on these patterns, habits, and commitments, provide a professional and insightful 6-month forecast.
+            Divide your prediction into three clear sections:
+            1. **Health & Wellness**: How will their current physical and mental habits play out?
+            2. **Career & Growth**: Where is their professional life heading based on their current focus?
+            3. **Finances & Stability**: Extrapolate their likely financial trajectory.
+            
+            Tone: Motivating, realistic, and sophisticated. 
+            Format: Clear paragraphs with bold headers.
+            Goal: Help the user see the long-term impact of their current daily choices.
+        `;
+
+        const result = await model.generateContent(prompt);
+        const prediction = result.response.text().trim();
+
+        res.json({ prediction });
+
+    } catch (err) {
+        console.error("Prediction error:", err);
+        res.status(500).json({ error: "Failed to generate prediction: " + err.message });
+    }
+});
+
+// --------------------
 // Debug Route
 // --------------------
 app.get("/api/debug", async (_, res) => {
