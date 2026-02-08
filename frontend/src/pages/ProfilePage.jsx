@@ -25,7 +25,7 @@ export default function ProfilePage({ user, onLogout, onBack }) {
 
                 const token = user.accessToken; // Often available on user object in Firebase Auth
 
-                const res = await fetch('http://localhost:3000/api/predict-future', {
+                const res = await fetch('https://to-do-iun8.onrender.com/api/predict-future', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
