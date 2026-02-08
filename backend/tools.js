@@ -296,6 +296,118 @@ const tools = {
         };
     },
 
+    // ===== GOOGLE WORKSPACE TOOLS (Hackathon Mode) =====
+
+    createSheet: async ({ title, headers }, context) => {
+        const { accessToken } = context;
+        if (!accessToken) return { success: false, error: "No access token" };
+
+        try {
+            const auth = new google.auth.OAuth2();
+            auth.setCredentials({ access_token: accessToken });
+            const sheets = google.sheets({ version: 'v4', auth });
+
+            // 1. Create Spreadsheet
+            const createRes = await sheets.spreadsheets.create({
+                requestBody: {
+                    properties: { title: title || "Job Applications" }
+                }
+            });
+            const spreadsheetId = createRes.data.spreadsheetId;
+            const spreadsheetUrl = createRes.data.spreadsheetUrl;
+
+            // 2. Add Headers if provided
+            if (headers && Array.isArray(headers) && headers.length > 0) {
+                await sheets.spreadsheets.values.update({
+                    spreadsheetId,
+                    range: 'Sheet1!A1',
+                    valueInputOption: 'RAW',
+                    requestBody: { values: [headers] }
+                });
+            }
+
+            console.log(`Workspace Trace: Created Sheet ${spreadsheetId} at ${spreadsheetUrl}`);
+            return {
+                success: true,
+                spreadsheetId,
+                spreadsheetUrl,
+                message: `Created spreadsheet "${title}"`
+            };
+        } catch (err) {
+            console.error("Workspace Trace: Failed to create sheet", err);
+            return { success: false, error: err.message };
+        }
+    },
+
+    appendRow: async ({ spreadsheetId, values }, context) => {
+        const { accessToken } = context;
+        if (!accessToken) return { success: false, error: "No access token" };
+
+        try {
+            const auth = new google.auth.OAuth2();
+            auth.setCredentials({ access_token: accessToken });
+            const sheets = google.sheets({ version: 'v4', auth });
+
+            await sheets.spreadsheets.values.append({
+                spreadsheetId,
+                range: 'Sheet1!A1', // Appends to first sheet automatically
+                valueInputOption: 'USER_ENTERED',
+                insertDataOption: 'INSERT_ROWS',
+                requestBody: { values: [values] }
+            });
+
+            return { success: true, message: "Added row to sheet" };
+        } catch (err) {
+            console.error("Workspace Trace: Failed to append row", err);
+            return { success: false, error: err.message };
+        }
+    },
+
+    createDoc: async ({ title, content }, context) => {
+        const { accessToken } = context;
+        if (!accessToken) return { success: false, error: "No access token" };
+
+        try {
+            const auth = new google.auth.OAuth2();
+            auth.setCredentials({ access_token: accessToken });
+            const docs = google.docs({ version: 'v1', auth });
+            const drive = google.drive({ version: 'v3', auth });
+
+            // 1. Create Doc
+            const createRes = await docs.documents.create({
+                requestBody: { title: title || "Project Plan" }
+            });
+            const documentId = createRes.data.documentId;
+            const docUrl = `https://docs.google.com/document/d/${documentId}/edit`;
+
+            // 2. Insert Content if provided
+            if (content) {
+                await docs.documents.batchUpdate({
+                    documentId,
+                    requestBody: {
+                        requests: [{
+                            insertText: {
+                                location: { index: 1 },
+                                text: content
+                            }
+                        }]
+                    }
+                });
+            }
+
+            console.log(`Workspace Trace: Created Doc ${documentId}`);
+            return {
+                success: true,
+                documentId,
+                documentUrl: docUrl,
+                message: `Created document "${title}"`
+            };
+        } catch (err) {
+            console.error("Workspace Trace: Failed to create doc", err);
+            return { success: false, error: err.message };
+        }
+    },
+
     // ===== CONVERSATION CONTEXT MANAGEMENT =====
 
     getConversationHistory: async (uid) => {

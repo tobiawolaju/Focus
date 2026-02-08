@@ -23,4 +23,9 @@ const googleProvider = new GoogleAuthProvider();
 googleProvider.addScope('https://www.googleapis.com/auth/calendar');
 googleProvider.addScope('https://www.googleapis.com/auth/calendar.events');
 
+// Add scopes for Google Workspace (Docs, Sheets) - for Hackathon Mode
+googleProvider.addScope('https://www.googleapis.com/auth/documents');
+googleProvider.addScope('https://www.googleapis.com/auth/spreadsheets');
+googleProvider.addScope('https://www.googleapis.com/auth/drive.file');
+
 export { auth, database, googleProvider };

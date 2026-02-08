@@ -347,35 +347,46 @@ app.post("/api/predict-future", async (req, res) => {
 });
 
 // --------------------
+// --------------------
 // Conversational Chat API
 // --------------------
 const LIFE_PLANNER_PROMPT = `You are a life planning assistant for Crastinat - a personal time editor app.
 
-Your role is to help users transform their goals and dreams into actionable daily routines.
+Your role is to help users transform their goals and dreams into actionable daily routines and organize their life.
+
+CAPABILITIES:
+1. Schedule Management: Add/Update/Delete activities on the user's timeline.
+2. Workspace Automation: Create Google Sheets for tracking (e.g., Job Applications, Budgets) and Docs for planning.
+3. Opportunity Finding: You can query online sources (simulated) to find hackathons or jobs.
 
 CONVERSATION FLOW:
-1. Listen to the user's goals, dreams, and current situation
-2. Ask clarifying questions to understand their constraints (time, energy, commitments)
-3. Review their existing schedule (provided below) to avoid conflicts
-4. Only propose activities when you have enough information
+1. Listen to the user's goals (e.g., "I want a job", "I want to win a hackathon").
+2. Ask clarifying questions.
+3. Review existing schedule.
+4. Propose a plan that includes both *Calendar Activities* (when to do it) and *Workspace Actions* (tools to track it).
 
 RESPONSE FORMAT:
 You MUST respond with ONLY valid JSON in one of these formats:
 
 For conversation (asking questions, discussing):
-{"type": "conversation", "message": "Your response here..."}
+{"type": "conversation", "message": "..."}
 
-For proposing activities (only when ready):
-{"type": "proposal", "message": "Based on our conversation, here's your routine...", "activities": [
-  {"title": "Activity name", "startTime": "HH:MM", "endTime": "HH:MM", "days": ["Monday", "Tuesday"], "description": "..."},
-  ...
-]}
+For proposing a plan (when ready):
+{
+  "type": "proposal",
+  "message": "Here is a plan to get you hired...",
+  "activities": [
+    {"title": "Apply to 5 jobs", "startTime": "09:00", "endTime": "11:00", "days": ["Monday", "Wednesday"], "description": "Use the tracker sheet"}
+  ],
+  "actions": [
+    {"type": "createSheet", "title": "Job Application Tracker 2026", "headers": ["Company", "Role", "Link", "Status", "Date Applied"]}
+  ]
+}
 
 GUIDELINES:
-- Be warm, motivating, and realistic
-- Ask about their wake/sleep times, work schedule, energy levels
-- Consider their existing commitments before proposing new ones
-- Start small - don't overwhelm with too many activities at once
+- If the user mentions "job application", ALWAYS propose creating a tracking sheet.
+- If the user mentions "hackathon", propose searching or a project plan Doc.
+- Be warm, motivating, and realistic.
 - Use 24-hour time format (e.g., "06:00", "14:30")
 - Days should be full names: "Monday", "Tuesday", etc.
 
@@ -456,24 +467,44 @@ Respond with JSON only:`;
 
 app.post("/api/chat/confirm", async (req, res) => {
     try {
-        const { activities, userId, accessToken, timeZone } = req.body;
-        if (!activities || !userId) {
-            return res.status(400).json({ error: "activities and userId required" });
+        const { activities, actions, userId, accessToken, timeZone } = req.body;
+        if (!userId) {
+            return res.status(400).json({ error: "userId required" });
         }
 
         const context = { uid: userId, accessToken, timeZone };
         const results = [];
 
-        for (const activity of activities) {
-            try {
-                // Normalize the activity data
-                const normalized = normalizeAliases(activity);
-                const safeArgs = normalizeAddActivityArgs(normalized);
-                const result = await tools.addActivity(safeArgs, context);
-                results.push({ success: true, activity: result.activity });
-            } catch (err) {
-                console.error("Error adding activity:", activity.title, err);
-                results.push({ success: false, title: activity.title, error: err.message });
+        // 1. Process Calendar Activities
+        if (activities && Array.isArray(activities)) {
+            for (const activity of activities) {
+                try {
+                    const normalized = normalizeAliases(activity);
+                    const safeArgs = normalizeAddActivityArgs(normalized);
+                    const result = await tools.addActivity(safeArgs, context);
+                    results.push({ success: true, type: 'activity', title: activity.title });
+                } catch (err) {
+                    console.error("Error adding activity:", activity.title, err);
+                    results.push({ success: false, type: 'activity', title: activity.title, error: err.message });
+                }
+            }
+        }
+
+        // 2. Process Workspace Actions
+        if (actions && Array.isArray(actions)) {
+            for (const action of actions) {
+                try {
+                    if (action.type === 'createSheet') {
+                        const result = await tools.createSheet({ title: action.title, headers: action.headers }, context);
+                        results.push({ success: true, type: 'sheet', title: action.title, url: result.spreadsheetUrl });
+                    } else if (action.type === 'createDoc') {
+                        const result = await tools.createDoc({ title: action.title, content: action.content }, context);
+                        results.push({ success: true, type: 'doc', title: action.title, url: result.documentUrl });
+                    }
+                } catch (err) {
+                    console.error("Error executing action:", action.type, err);
+                    results.push({ success: false, type: 'action', title: action.type, error: err.message });
+                }
             }
         }
 
@@ -481,16 +512,18 @@ app.post("/api/chat/confirm", async (req, res) => {
         await tools.clearConversation(userId);
 
         const successCount = results.filter(r => r.success).length;
+        const totalItems = (activities?.length || 0) + (actions?.length || 0);
+
         res.json({
             success: successCount > 0,
-            message: `Added ${successCount} of ${activities.length} activities to your schedule!`,
+            message: `Executed ${successCount} of ${totalItems} items!`,
             results,
             refreshNeeded: successCount > 0
         });
 
     } catch (err) {
         console.error("Confirm error:", err);
-        res.status(500).json({ error: "Failed to confirm activities: " + err.message });
+        res.status(500).json({ error: "Failed to confirm targets: " + err.message });
     }
 });
 
