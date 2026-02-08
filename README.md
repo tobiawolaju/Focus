@@ -1,112 +1,151 @@
-# Crastinat
+# IF·THEN  
+### See the future your choices create.
 
-**Stop delaying. Start living.**
+**If·Then** is a personal consequence simulator that turns daily decisions into visible futures.
 
-> *If it’s not on the timeline, it doesn’t exist.*
+It helps people move from intention to action by making time, habits, and tradeoffs tangible.  
+Not as motivation — but as cause and effect.
 
-Crastinat is a **personal time editor** built to turn intention into reality. It helps you beat procrastination, manage opportunities, and organize your life by **visualizing time as a timeline** you can edit, reorder, and commit to.
+> If you keep living like this… then this is where you end up.
 
 ---
 
-## Why Crastinat exists
+## Why IF·THEN exists
 
-Procrastination isn’t laziness — it’s the **gap between plans and reality**.
-Most tools let you plan. Crastinat makes plans **happen**.
+Procrastination isn’t laziness.  
+It’s uncertainty.
 
-* Turn scattered ideas into a 24-hour timeline
-* See your day, week, or month at a glance
-* Remove friction from decisions
-* Turn goals into actual, lived time
+Most people don’t change because the future is abstract.  
+IF·THEN makes the future concrete.
+
+Instead of asking *what you want to do*, IF·THEN shows you *what happens if you don’t* — and how small changes compound over time.
+
+This is especially critical in environments where structure is weak and consequences are delayed.
+
+---
+
+## What IF·THEN does
+
+- Transforms goals and habits into **branching future timelines**
+- Shows **cause-and-effect** over days, weeks, and months
+- Lets users **edit decisions** and instantly see downstream impact
+- Turns time into something you can reason about, not just schedule
+
+This is not prediction.  
+It’s simulation.
 
 ---
 
 ## How it works
 
-### 1. Timeline-first interface
-
-* 24-hour horizontal timeline
-* Drag, resize, split, and reorder time blocks
-* Visual overview of your entire day
-
-### 2. Chat-based planning
-
-Type naturally:
-
-```
-I’m swimming on weekends at 5pm for 3 hours
-```
-
-Crastinat:
-
-* Understands intent
-* Places it correctly on the timeline
-* Sets reminders
-* Syncs with Google Calendar
-
-### 3. Edit your life
-
-* Drag & drop events
-* Adjust durations visually
-* Reorder priorities instantly
-
-### 4. Optional tagging & sharing
-
-* Tag blocks (#work, #study, #health)
-* Collaboration is optional — Crastinat is **personal first**
+### 1. Timeline-first life model
+- Time is represented as a continuous, editable timeline
+- Days are treated like footage, not lists
+- If it’s not on the timeline, it doesn’t exist
 
 ---
 
-## What Crastinat is **not**
+### 2. Natural language → structured time
+Users speak normally:
 
-* ❌ A to-do list
-* ❌ A habit tracker
-* ❌ A motivational app
-* ❌ A note-taking tool
+> “I work late most nights and scroll till 2am.”
 
-Crastinat doesn’t ask *what you want to do*. It asks *when it will actually happen*.
+IF·THEN:
+- Extracts habits, constraints, and patterns
+- Places them on the timeline
+- Builds a baseline life trajectory
+
+---
+
+### 3. Branching futures (core feature)
+From the same starting point, IF·THEN simulates:
+
+- **Current path** — no change
+- **Improved path** — small discipline
+- **Focused path** — enforced structure
+
+Each future explains:
+- What improves
+- What breaks
+- What compounds
+- Why it happens
+
+---
+
+### 4. Edit decisions, not tasks
+- Drag a habit → future recalculates
+- Remove a behavior → timeline degrades
+- Add structure → long-term stability appears
+
+You don’t manage tasks.  
+You manage consequences.
+
+---
+
+### 5. “Show me my future”
+IF·THEN generates:
+- A short narrated scenario
+- Visual snapshots of key moments
+- A causal explanation linking today → tomorrow
+
+No prophecy.  
+No fantasy.  
+Just logic over time.
+
+---
+
+## What IF·THEN is not
+
+❌ A to-do list  
+❌ A habit tracker  
+❌ A motivation app  
+❌ A calendar wrapper  
+
+IF·THEN does not ask what you *want* to do.  
+It shows what you are *choosing* to become.
 
 ---
 
 ## Philosophy
 
-> **If it’s not on the timeline, it doesn’t exist.**
+- The future is not guessed — it is accumulated  
+- Small decisions matter more than big intentions  
+- Structure creates freedom  
+- If you can see consequences, you can change behavior  
 
-* Anything not in Crastinat is optional.
-* Anything in Crastinat is real.
-* Time is your most valuable asset — treat it like footage to edit.
+> Discipline works best when it’s visible.
 
 ---
 
-## Use Cases
+## Use cases
 
-* Personal life planning
-* Opportunity management
-* Beating procrastination
-* Daily/weekly scheduling
-* Turning goals into executed reality
+- Beating procrastination through consequence awareness  
+- Life planning in unstable or chaotic environments  
+- Career and skill trajectory simulation  
+- Habit impact visualization  
+- Decision-making under uncertainty  
 
 ---
 
 ## Roadmap (high level)
 
-* [x] AI-powered natural language to timeline parsing
-* [ ] Conflict detection & visual warnings
-* [ ] Playback mode (scrub through your day/week)
-* [ ] Smart suggestions based on past timelines
-* [ ] Offline-first mode
+- Gemini-powered long-horizon reasoning
+- Real-time future recalculation
+- Timeline playback (scrub through outcomes)
+- Multimodal future summaries (text + visuals)
+- Offline-first personal modeling
 
 ---
 
-## Technical Architecture
+## Technical architecture
 
-For technical details, setup instructions, and architecture diagrams, please refer to [architecture.md](./architecture.md).
+For setup instructions, system design, and Gemini integration details, see `architecture.md`.
 
 ---
 
 ## Status
 
-Crastinat is actively being built to solve a **real personal problem**:
-turning intention into lived time over a 6-month transformation.
+IF·THEN is an active experimental project exploring how AI reasoning can make long-term consequences visible — especially where external structure is weak.
 
 ---
 
