@@ -6,7 +6,7 @@ import { useAuth } from './hooks/useAuth';
 import './index.css';
 
 function App() {
-  const { user, login, logout, accessToken, loading: authLoading } = useAuth();
+  const { user, login, logout, accessToken, loading: authLoading, getFreshAccessToken } = useAuth();
   const [view, setView] = React.useState('timeline'); // 'timeline' or 'profile'
   const [showSplash, setShowSplash] = React.useState(true);
 
@@ -30,12 +30,14 @@ function App() {
           user={user}
           onLogout={logout}
           accessToken={accessToken}
+          getFreshAccessToken={getFreshAccessToken}
           onNavigateToProfile={() => setView('profile')}
         />
       ) : (
         <ProfilePage
           user={user}
           accessToken={accessToken}
+          getFreshAccessToken={getFreshAccessToken}
           onLogout={logout}
           onBack={() => setView('timeline')}
         />

@@ -8,7 +8,7 @@ import { database } from '../firebase-config';
 import { ref, update, remove } from 'firebase/database';
 import './Dashboard.css';
 
-export default function Dashboard({ user, onLogout, accessToken, onNavigateToProfile }) {
+export default function Dashboard({ user, onLogout, accessToken, getFreshAccessToken, onNavigateToProfile }) {
     const { activities, loading: scheduleLoading } = useSchedule(user?.uid);
     const [selectedActivity, setSelectedActivity] = useState(null);
     const [isProcessing, setIsProcessing] = useState(false);
@@ -23,10 +23,12 @@ export default function Dashboard({ user, onLogout, accessToken, onNavigateToPro
         console.log(`Flow: Sending chat message to ${API_BASE_URL}/api/chat`);
         const timeZone = Intl.DateTimeFormat().resolvedOptions().timeZone;
         try {
+            // Get a fresh token before API call
+            const freshToken = await getFreshAccessToken();
             const response = await fetch(`${API_BASE_URL}/api/chat`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ message, userId: user.uid, accessToken, timeZone })
+                body: JSON.stringify({ message, userId: user.uid, accessToken: freshToken, timeZone })
             });
             const result = await response.json();
             console.log("Flow: AI Response received:", result);
@@ -47,6 +49,8 @@ export default function Dashboard({ user, onLogout, accessToken, onNavigateToPro
         const timeZone = Intl.DateTimeFormat().resolvedOptions().timeZone;
 
         try {
+            // Get a fresh token before API call
+            const freshToken = await getFreshAccessToken();
             const response = await fetch(`${API_BASE_URL}/api/activities/update`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
@@ -54,7 +58,7 @@ export default function Dashboard({ user, onLogout, accessToken, onNavigateToPro
                     id: updatedActivity.id,
                     updates: updatedActivity,
                     userId: user.uid,
-                    accessToken,
+                    accessToken: freshToken,
                     timeZone
                 })
             });
@@ -79,13 +83,15 @@ export default function Dashboard({ user, onLogout, accessToken, onNavigateToPro
         const timeZone = Intl.DateTimeFormat().resolvedOptions().timeZone;
 
         try {
+            // Get a fresh token before API call
+            const freshToken = await getFreshAccessToken();
             const response = await fetch(`${API_BASE_URL}/api/activities/delete`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
                     id: activityId,
                     userId: user.uid,
-                    accessToken,
+                    accessToken: freshToken,
                     timeZone
                 })
             });
