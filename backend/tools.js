@@ -254,12 +254,24 @@ const tools = {
         if (accessToken && activityToDelete.googleEventId) {
             try {
                 const calendar = getCalendarClient(accessToken);
-                console.log(`Sync Trace: Sending to Google (Delete): ${activityToDelete.googleEventId}`);
+
+                // For recurring events, the eventId might be an instance ID (e.g., "abc123_20260208T100000Z")
+                // We need to extract the base recurring event ID to delete ALL instances
+                let eventIdToDelete = activityToDelete.googleEventId;
+
+                // Check if this is a recurring event instance ID (contains underscore followed by date)
+                const instanceMatch = eventIdToDelete.match(/^(.+)_\d{8}T\d{6}Z$/);
+                if (instanceMatch) {
+                    console.log(`Sync Trace: Detected instance ID, using base event ID: ${instanceMatch[1]}`);
+                    eventIdToDelete = instanceMatch[1];
+                }
+
+                console.log(`Sync Trace: Sending to Google (Delete): ${eventIdToDelete}`);
                 await calendar.events.delete({
                     calendarId: 'primary',
-                    eventId: activityToDelete.googleEventId,
+                    eventId: eventIdToDelete,
                 });
-                console.log("Sync Trace: Google Calendar event deleted.");
+                console.log("Sync Trace: Google Calendar event deleted (all instances).");
             } catch (err) {
                 console.error("Sync Trace: FAIL (Delete):", err.message);
                 calendarSync = { success: false, error: err.message };
