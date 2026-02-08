@@ -301,42 +301,79 @@ app.post("/api/chat", async (req, res) => {
 // --------------------
 app.post("/api/predict-future", async (req, res) => {
     try {
-        const { userId, accessToken } = req.body;
+        const { userId, accessToken, timeZone } = req.body;
         if (!userId) {
             return res.status(400).json({ error: "userId required" });
         }
 
-        const context = { uid: userId, accessToken };
-        const schedule = await tools.getSchedule({}, context);
-
-        if (!schedule || schedule.length === 0) {
-            return res.json({ prediction: "Your schedule is empty! I need some data to predict your future. Start by adding some daily activities." });
+        // 1. Check for existing futures
+        const existingFutures = await tools.getUserFutures(userId);
+        if (existingFutures && existingFutures.data) {
+            console.log(`Returning existing futures for ${userId}`);
+            return res.json({ futures: existingFutures.data });
         }
 
+        // 2. Gather context (Schedule + Chat History)
+        const context = { uid: userId, accessToken, timeZone };
+        const { messages: chatHistory, schedule } = await tools.getConversationHistory(userId);
+
+        if ((!schedule || schedule.length === 0) && chatHistory.length === 0) {
+            return res.json({
+                futures: [],
+                message: "Not enough data! Add some activities or chat with me so I can predict your future."
+            });
+        }
+
+        // 3. Construct Prompt
+        const scheduleText = JSON.stringify(schedule.map(a => ({ title: a.title, days: a.days, startTime: a.start, endTime: a.end })));
+        const chatText = chatHistory.map(m => `${m.role}: ${m.content}`).join("\n");
+
         const prompt = `
-            You are a visionary life strategist. 
-            Analyze the following weekly schedule and activities of a user.
-            Schedule: ${JSON.stringify(schedule, null, 2)}
-            
-            Based on these patterns, habits, and commitments, provide a professional and insightful 6-month forecast.
-            Divide your prediction into three clear sections:
-            1. **Health & Wellness**: How will their current physical and mental habits play out?
-            2. **Career & Growth**: Where is their professional life heading based on their current focus?
-            3. **Finances & Stability**: Extrapolate their likely financial trajectory.
-            
-            Tone: Motivating, realistic, and sophisticated. 
-            Format: Clear paragraphs with bold headers.
-            Goal: Help the user see the long-term impact of their current daily choices.
+            You are a prescient life simulator engine.
+            Analyze the user's data to project 3 distinct future paths.
+
+            DATA:
+            - Schedule: ${scheduleText}
+            - Recent Chat Context: ${chatText}
+
+            TASK:
+            Generate 3 future scenarios based on their current trajectory, habits, and mindset.
+            1. "Baseline Path": The most likely outcome if they keep doing exactly what they are doing.
+            2. "Optimistic Path": The outcome if they successfully implement their goals and optimize their routine.
+            3. "Risk Path": The outcome if bad habits compound or burnout ensues.
+
+            OUTPUT FORMAT:
+            Return ONLY a JSON array of 3 objects. No markdown.
+            [
+              {
+                "title": "Baseline Path", 
+                "timeHorizon": "6 months", 
+                "summary": ["Bullet 1", "Bullet 2"], 
+                "details": "Full narrative explanation..." 
+              },
+              ...
+            ]
+
+            Tone: Serious, analytical, slightly dramatic but realistic.
         `;
 
+        // 4. Call Gemini
         try {
             const result = await model.generateContent(prompt);
-            const prediction = result.response.text().trim();
-            res.json({ prediction });
+            const text = result.response.text().trim();
+            const jsonText = text.replace(/```json/g, "").replace(/```/g, "").trim();
+            const futures = JSON.parse(jsonText);
+
+            // 5. Store in Firebase
+            await tools.saveUserFutures(userId, futures);
+
+            res.json({ futures });
+
         } catch (err) {
             if (err.status === 429 || err.message?.includes("429")) {
-                return res.json({ prediction: "I'm a bit overwhelmed with predictions right now! Please try again in a few minutes. ⏳" });
+                return res.status(429).json({ error: "Too many predictions right now. Try again later." });
             }
+            console.error("Gemini Generation Error:", err);
             throw err;
         }
 

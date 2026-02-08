@@ -364,6 +364,35 @@ const tools = {
             console.error("Error clearing conversation:", err);
             return { success: false, error: err.message };
         }
+    },
+
+    // ===== PREDICTED FUTURES =====
+
+    getUserFutures: async (uid) => {
+        if (!uid) return null;
+        try {
+            const ref = db.ref(`users/${uid}/futures`);
+            const snapshot = await ref.once('value');
+            return snapshot.val();
+        } catch (err) {
+            console.error("Error getting futures:", err);
+            return null;
+        }
+    },
+
+    saveUserFutures: async (uid, futures) => {
+        if (!uid) return { success: false, error: "No user ID" };
+        try {
+            const ref = db.ref(`users/${uid}/futures`);
+            await ref.set({
+                data: futures,
+                lastUpdated: Date.now()
+            });
+            return { success: true };
+        } catch (err) {
+            console.error("Error saving futures:", err);
+            return { success: false, error: err.message };
+        }
     }
 };
 
