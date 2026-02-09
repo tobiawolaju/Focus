@@ -75,20 +75,20 @@
 
 .future-card-footer {
     font-size: 0.8rem;
-    color: var(--text-accent, #646cff);
+    color: #1a73e8;
     font-weight: 500;
     margin-top: auto;
 }
 
-/* Loading State */
 .loading-futures,
 .no-futures {
     padding: 32px;
-    background: var(--surface-secondary, #1a1a1a);
-    border-radius: 8px;
+    background: linear-gradient(135deg, rgba(26, 115, 232, 0.15) 0%, rgba(26, 115, 232, 0.05) 100%);
+    border-radius: 12px;
     text-align: center;
-    color: var(--text-muted, #888);
-    border: 1px dashed var(--border-visible, #333);
+    color: #1a73e8;
+    border: 1px solid rgba(26, 115, 232, 0.3);
+    font-weight: 500;
 }
 
 /* Modal */
@@ -171,14 +171,15 @@
 }
 
 .modal-horizon {
-    color: var(--text-accent, #646cff);
+    color: #1a73e8;
     font-family: var(--font-mono, monospace);
     font-size: 0.85rem;
     text-transform: uppercase;
     letter-spacing: 0.05em;
     margin-bottom: 24px;
     display: inline-block;
-    border: 1px solid var(--border-subtle, #333);
+    background: rgba(26, 115, 232, 0.1);
+    border: 1px solid rgba(26, 115, 232, 0.3);
     padding: 4px 8px;
     border-radius: 4px;
 }
