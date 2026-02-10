@@ -1,17 +1,40 @@
 require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
-const { GoogleGenerativeAI } = require('@google/generative-ai');
+const { VertexAI } = require('@google-cloud/vertexai');
 const crypto = require('crypto');
 const tools = require('./tools');
 
 // --------------------
-// Gemini Chat Route
+// Vertex AI Configuration
 // --------------------
-const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
-// Switching to gemini-1.5-flash which is generally available and stable.
-// 'gemini-flash-latest' was causing 400 Bad Request errors due to regional/availability issues.
-const model = genAI.getGenerativeModel({ model: "gemini-flash-latest" });
+const path = require('path');
+const fs = require('fs');
+
+const projectId = process.env.VERTEX_AI_PROJECT_ID;
+const location = process.env.VERTEX_AI_LOCATION || 'us-central1';
+
+// Match service account path logic from firebase-config.js
+const serviceAccountPath = process.env.RENDER
+    ? '/etc/secrets/serviceAccountKey.json'
+    : path.join(__dirname, 'serviceAccountKey.json');
+
+// If we have a local service account file, set it for the Cloud SDKs to find
+if (fs.existsSync(serviceAccountPath)) {
+    process.env.GOOGLE_APPLICATION_CREDENTIALS = serviceAccountPath;
+}
+
+const vertexAI = new VertexAI({ project: projectId, location: location });
+
+// Using gemini-1.5-flash model via Vertex AI for better regional support
+const model = 'gemini-1.5-flash-002';
+
+// Helper function to generate content using Vertex AI
+async function generateContent(prompt) {
+    const generativeModel = vertexAI.getGenerativeModel({ model: model });
+    const result = await generativeModel.generateContent(prompt);
+    return result;
+}
 
 // --------------------
 // Express App
@@ -178,14 +201,14 @@ User message:
 `;
 
     try {
-        const result = await model.generateContent(prompt);
-        const text = result.response.text().trim();
+        const result = await generateContent(prompt);
+        const text = result.response.candidates[0].content.parts[0].text.trim();
         const jsonText = text.replace(/```json/g, "").replace(/```/g, "");
         return JSON.parse(jsonText);
     } catch (err) {
         // Handle 429 Quota Exceeded
         if (err.status === 429 || err.message?.includes("429")) {
-            console.error("Gemini Quota Exceeded:", err.message);
+            console.error("Vertex AI Quota Exceeded:", err.message);
             return { intent: "quotaError", arguments: {}, confidence: 1 };
         }
         console.error("Intent extraction failed:", err);
@@ -380,10 +403,10 @@ app.post("/api/predict-future", async (req, res) => {
             Tone: Serious, analytical, slightly dramatic but realistic.
         `;
 
-        // 4. Call Gemini
+        // 4. Call Vertex AI
         try {
-            const result = await model.generateContent(prompt);
-            const text = result.response.text().trim();
+            const result = await generateContent(prompt);
+            const text = result.response.candidates[0].content.parts[0].text.trim();
             const jsonText = text.replace(/```json/g, "").replace(/```/g, "").trim();
             const futures = JSON.parse(jsonText);
 
@@ -396,7 +419,7 @@ app.post("/api/predict-future", async (req, res) => {
             if (err.status === 429 || err.message?.includes("429")) {
                 return res.status(429).json({ error: "Too many predictions right now. Try again later." });
             }
-            console.error("Gemini Generation Error:", err);
+            console.error("Vertex AI Generation Error:", err);
             throw err;
         }
 
@@ -518,8 +541,8 @@ Respond with JSON only:`;
         console.log("Conversation: Processing message from", userId);
 
         try {
-            const result = await model.generateContent(fullPrompt);
-            const text = result.response.text().trim();
+            const result = await generateContent(fullPrompt);
+            const text = result.response.candidates[0].content.parts[0].text.trim();
 
             // Try to parse JSON from response
             let parsed;
@@ -625,7 +648,9 @@ app.get("/api/debug", async (_, res) => {
     } catch (e) { firebaseStatus = "Error loading module"; }
 
     const status = {
-        geminiKeyPresent: !!process.env.GEMINI_API_KEY,
+        vertexAIConfigured: !!(process.env.VERTEX_AI_PROJECT_ID && process.env.VERTEX_AI_LOCATION),
+        vertexAIProject: process.env.VERTEX_AI_PROJECT_ID || 'Not Set',
+        vertexAILocation: process.env.VERTEX_AI_LOCATION || 'Not Set',
         firebase: firebaseStatus,
         envFile: require("fs").existsSync(".env"),
         nodeVersion: process.version
