@@ -11,11 +11,11 @@ const tools = require('./tools');
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
 
 // Using gemini-1.5-flash for speed and cost efficiency
-const model = genAI.getGenerativeModel({ model: "gemini-flash-latest" });
+const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
 
 // Helper function to generate content using Google AI Studio
 async function generateContent(prompt) {
-    console.log(`[Gemini API] Generating content with model: gemini-flash-latest`);
+    console.log(`[Gemini API] Generating content with model: gemini-1.5-flash`);
     const result = await model.generateContent(prompt);
     return result;
 }
@@ -406,7 +406,7 @@ app.post("/api/predict-future", async (req, res) => {
             if (err.status === 429 || err.message?.includes("429")) {
                 return res.status(429).json({ error: "Too many predictions right now. Try again later." });
             }
-            console.error("Vertex AI Generation Error:", err);
+            console.error("Gemini API Generation Error:", err);
             throw err;
         }
 
