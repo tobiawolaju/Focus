@@ -8,7 +8,7 @@ export function useConversation(user, getFreshAccessToken) {
 
     const API_BASE_URL = window.location.hostname === 'localhost'
         ? 'http://localhost:3000'
-        : 'https://if-then.onrender.com';
+        : ''; // Use relative paths in production (Vercel)
 
     const sendMessage = useCallback(async (message) => {
         if (!user || !message.trim()) return;

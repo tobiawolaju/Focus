@@ -136,8 +136,8 @@ To-Do/
 - Firebase Project with Auth & Realtime Database enabled
 
 ### Live Deployment
-- **Backend**: [https://if-then.onrender.com](https://if-then.onrender.com)
-- **Frontend**: Vite build, deployed separately (e.g., Vercel)
+- **Backend/Frontend**: Vercel (Serverless Functions for API)
+- **Unified Domain**: All requests under the same domain, with `/api/*` routed to serverless functions.
 
 ### Local Development
 
@@ -165,9 +165,9 @@ To-Do/
 | Layer | Technology |
 |-------|------------|
 | Frontend | React, Vite, CSS |
-| Backend | Node.js, Express |
+| Backend | Node.js (Vercel Serverless Functions) |
 | AI | Google Gemini API |
 | Auth | Firebase Authentication |
 | Database | Firebase Realtime Database |
 | Calendar | Google Calendar API |
-| Hosting | Render (Backend), Vercel (Frontend) |
+| Hosting | Vercel |
